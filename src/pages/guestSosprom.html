@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guest - SIWARAS UT Sosprom</title>
+    <link rel="stylesheet" href="../assets/style/main.css" />
+    <link rel="stylesheet" href="../assets/style/guest.css" />
+</head>
+
+<body>
+    <!-- Loader -->
+    <div id="loader" class="loader-overlay">
+        <div class="spinner"></div>
+        <span>Loading...</span>
+    </div>
+
+    <!-- Header -->
+    <header class="guest-header">
+        <div class="container guest-header-inner">
+            <div class="guest-brand">
+                <img src="../assets/icon/logo-ut.png" alt="Logo UT" />
+                <span class="guest-brand-text">SIWARAS UT</span>
+            </div>
+            <button class="btn-logout" onclick="handleLogout()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M16 13v-2H7V8l-5 4 5 4v-3z" />
+                    <path
+                        d="M20 3h-9c-1.103 0-2 .897-2 2v4h2V5h9v14h-9v-4H9v4c0 1.103.897 2 2 2h9c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2z" />
+                </svg>
+                Keluar
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="guest-main">
+        <div class="container">
+            <h1 class="welcome-title">Selamat Datang, Di SIWARAS UT!</h1>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Barang Masuk</h3>
+                        <p class="stat-value" id="totalMasuk">0</p>
+                    </div>
+                    <div class="stat-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path
+                                d="M21 11H6.414l5.293-5.293-1.414-1.414L2.586 12l7.707 7.707 1.414-1.414L6.414 13H21z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Barang Keluar</h3>
+                        <p class="stat-value" id="totalKeluar">0</p>
+                    </div>
+                    <div class="stat-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path
+                                d="M3 13h14.586l-5.293 5.293 1.414 1.414L21.414 12l-7.707-7.707-1.414 1.414L18.586 11H3z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Total Barang</h3>
+                        <p class="stat-value" id="totalBarang">0</p>
+                    </div>
+                    <div class="stat-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path
+                                d="M20 7h-4V4c0-1.103-.897-2-2-2h-4c-1.103 0-2 .897-2 2v3H4c-1.103 0-2 .897-2 2v11c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V9c0-1.103-.897-2-2-2zM10 4h4v3h-4V4zm10 15H4V9h16v10z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-placeholder">
+                        <canvas id="lineChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-placeholder">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-section">
+                <div class="table-header">
+                    <h2 class="table-title">Barang Sosprom</h2>
+                    <div style="display: flex; gap: 12px; align-items: center">
+                        <div class="table-search">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path
+                                    d="M10 18a7.952 7.952 0 0 0 4.897-1.688l4.396 4.396 1.414-1.414-4.396-4.396A7.952 7.952 0 0 0 18 10c0-4.411-3.589-8-8-8s-8 3.589-8 8 3.589 8 8 8zm0-14c3.309 0 6 2.691 6 6s-2.691 6-6 6-6-2.691-6-6 2.691-6 6-6z" />
+                            </svg>
+                            <input type="text" id="searchInput" placeholder="Cari Di Sini" />
+                        </div>
+                        <button class="sort-btn" onclick="toggleSort()">
+                            <path xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 21l6-8h-4V3H6v10H4zm12-4h-4v10h2V17h2z" />
+                            </path>
+                        </button>
+                    </div>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>NO</th>
+                            <th>Kode Barang</th>
+                            <th>Nama Barang</th>
+                            <th>Satuan</th>
+                            <th>Stok</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px">
+                                Memuat data...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="../script/config.js"></script>
+    <script src="../script/guestSosprom.js"></script>
+</body>
+
+</html>

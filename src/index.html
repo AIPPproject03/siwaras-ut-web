@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SIWARAS UT - Sistem Inventori Wisuda & Rangkaian Sosprom</title>
+    <link rel="stylesheet" href="assets/style/main.css" />
+    <link rel="stylesheet" href="assets/style/landingPage.css" />
+</head>
+
+<body>
+    <!-- Loader Overlay -->
+    <div id="loader" class="loader-overlay">
+        <div class="spinner"></div>
+        <span>Loading...</span>
+    </div>
+
+    <!-- Header -->
+    <header class="site-header">
+        <div class="container header-inner">
+            <a href="index.html" class="brand">
+                <img src="assets/icon/logo-ut.png" alt="Logo UT" class="brand-logo" />
+                <div class="brand-info">
+                    <div class="brand-text">SIWARAS UT</div>
+                    <div class="brand-subtitle">
+                        Sistem Inventori Wisuda & Rangkaian Sosprom
+                    </div>
+                </div>
+            </a>
+            <nav class="nav">
+                <div class="dropdown">
+                    <button class="btn btn-outline dropdown-toggle" id="adminDropdown">
+                        Admin
+                        <svg class="dropdown-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                            fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu" id="adminMenu">
+                        <a href="pages/loginWisuda.html?mode=admin" class="dropdown-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            Admin Wisuda
+                        </a>
+                        <a href="pages/loginSosprom.html?mode=admin" class="dropdown-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            Admin Sosprom
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-overlay"></div>
+        <div class="container hero-content">
+            <h1 class="hero-title">SELAMAT DATANG Di SIWARAS UT</h1>
+            <h2 class="hero-subtitle">
+                Sistem Inventori Wisuda &<br />Rangkaian Sosprom
+            </h2>
+
+            <div class="hero-cards">
+                <!-- Card Wisuda -->
+                <div class="inventory-card">
+                    <h3 class="card-title">Sistem Inventori<br />Wisuda</h3>
+                    <button class="btn btn-primary btn-lg" onclick="window.location.href='pages/guestWisuda.html'">
+                        Lihat Data
+                    </button>
+                </div>
+
+                <!-- Card Sosprom -->
+                <div class="inventory-card">
+                    <h3 class="card-title">Sistem Inventori<br />Sosprom</h3>
+                    <button class="btn btn-primary btn-lg" onclick="window.location.href='pages/guestSosprom.html'">
+                        Lihat Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <div class="footer-brand">
+                <div class="brand-text">SIWARAS UT</div>
+                <small>&copy; 2025 Universitas Terbuka. All rights reserved.</small>
+            </div>
+            <div class="footer-links">
+                <a href="#">Tentang</a>
+                <a href="#">Bantuan</a>
+                <a href="#">Kontak</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script/config.js"></script>
+    <script src="script/landing.js"></script>
+</body>
+
+</html>

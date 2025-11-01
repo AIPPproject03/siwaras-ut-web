@@ -1,0 +1,585 @@
+{
+	"info": {
+		"_postman_id": "9e3f1de6-d135-4b92-9b90-cfb9620dfdd3",
+		"name": "SIWARAS",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "39793776"
+	},
+	"item": [
+		{
+			"name": "MASTER BARANG",
+			"item": [
+				{
+					"name": "masterBarang",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n\"type\":\"masterBarang\",\r\n    \"data\":{\r\n      \"kodeBarang\":\"BRG-101\",\r\n      \"namaBarang\":\"Toga Wisuda\",\r\n      \"satuan\":\"pcs\",\r\n      \"stok\":100,\r\n      \"createdBy\":\"Tester\"\r\n    }\r\n  }\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "updateMasterBarang",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"type\": \"updateMasterBarang\",\r\n  \"data\": {\r\n    \"kodeBarang\": \"BRG-101\",\r\n    \"namaBarang\": \"Toga Wisuda (Uk. L)\",\r\n    \"satuan\": \"pcs\",\r\n    \"updatedBy\": \"Tester\"\r\n  }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "deleteMasterBarang",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"type\": \"deleteMasterBarang\",\r\n  \"data\": { \"kodeBarang\": \"BRG-101\", \"deletedBy\": \"Tester\" }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "BARANG MASUK",
+			"item": [
+				{
+					"name": "loginAdmin",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"type\": \"login\",\r\n  \"data\": { \"username\": \"admin\", \"password\": \"admin123\" }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "barangMasuk",
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {}
+					},
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"type\": \"barangMasuk\",\r\n  \"data\": {\r\n    \"tanggal\": \"2025-10-27\",\r\n    \"kodeBarang\": \"121212\",\r\n    \"namaBarang\": \"Topi\",\r\n    \"jumlah\": 100,\r\n    \"satuan\": \"pcs\",\r\n    \"keterangan\": \"Ayo Ja\",\r\n    \"createdBy\": \"Irwin\"\r\n  }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "updateBarangMasuk",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"type\": \"updateBarangMasuk\",\r\n  \"data\": {\r\n    \"id_bm\": \"bm-27/10/25-1\",\r\n    \"jumlah\": 100,\r\n    \"keterangan\": \"Revisi PO\",\r\n    \"updatedBy\": \"Tester\"\r\n  }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "deleteBarangMasuk",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"type\": \"deleteBarangMasuk\",\r\n  \"data\": { \"id_bm\": \"bm-27/10/25-2\", \"deletedBy\": \"Tester\" }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "BARANG KELUAR",
+			"item": [
+				{
+					"name": "barangKeluar",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"type\":\"barangKeluar\",\r\n    \"data\":{\r\n      \"tanggal\":\"2025-10-27\",\r\n      \"kodeBarang\":\"BRG-101\",\r\n      \"namaBarang\":\"Toga Wisuda\",\r\n      \"jumlah\":5,\r\n      \"satuan\":\"pcs\",\r\n      \"penerima\":\"Panitia\",\r\n      \"event\":\"Wisuda\",\r\n      \"createdBy\":\"Tester\"\r\n    }\r\n  }\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "updateBarangKeluar",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"type\": \"updateBarangKeluar\",\r\n  \"data\": {\r\n    \"id_bk\": \"bk-27/10/25-1\",\r\n    \"jumlah\": 8,\r\n    \"penerima\": \"Panitia Prodi\",\r\n    \"event\": \"Wisuda\",\r\n    \"updatedBy\": \"Tester\"\r\n  }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "deleteBarangKeluar",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"type\": \"deleteBarangKeluar\",\r\n  \"data\": { \"id_bk\": \"bk-27/10/25-1\", \"deletedBy\": \"Tester\" }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ADMIN",
+			"item": [
+				{
+					"name": "loginAdmin",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"type\": \"login\",\r\n  \"data\": { \"username\": \"admin\", \"password\": \"admin123\" }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAdmin",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec?type=readAdmin&limit=100\n",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "readAdmin"
+								},
+								{
+									"key": "limit",
+									"value": "100\n"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "addAdmin",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"type\":\"admin\",\r\n    \"data\":{\r\n        \"username\":\"admin_test\",\r\n        \"password\":\"admin123\"\r\n    }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec",
+							"protocol": "https",
+							"host": [
+								"script",
+								"google",
+								"com"
+							],
+							"path": [
+								"macros",
+								"s",
+								"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+								"exec"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "readAudit",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec?type=readAudit",
+					"protocol": "https",
+					"host": [
+						"script",
+						"google",
+						"com"
+					],
+					"path": [
+						"macros",
+						"s",
+						"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+						"exec"
+					],
+					"query": [
+						{
+							"key": "type",
+							"value": "readAudit"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "readMasterBarang",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec?type=readMasterBarang&limit=100",
+					"protocol": "https",
+					"host": [
+						"script",
+						"google",
+						"com"
+					],
+					"path": [
+						"macros",
+						"s",
+						"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+						"exec"
+					],
+					"query": [
+						{
+							"key": "type",
+							"value": "readMasterBarang"
+						},
+						{
+							"key": "limit",
+							"value": "100"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "readBarangMasuk",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec?type=readBarangMasuk&limit=50",
+					"protocol": "https",
+					"host": [
+						"script",
+						"google",
+						"com"
+					],
+					"path": [
+						"macros",
+						"s",
+						"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+						"exec"
+					],
+					"query": [
+						{
+							"key": "type",
+							"value": "readBarangMasuk"
+						},
+						{
+							"key": "limit",
+							"value": "50"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "readBarangKeluar",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://script.google.com/macros/s/AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw/exec?type=readBarangKeluar&limit=50",
+					"protocol": "https",
+					"host": [
+						"script",
+						"google",
+						"com"
+					],
+					"path": [
+						"macros",
+						"s",
+						"AKfycbxA2EDaXW-3ayhXT3aw82I22h8i0Con1Pa3a4vDMeeTgCMG2pSepM8lf-rsLaNLe-HgFw",
+						"exec"
+					],
+					"query": [
+						{
+							"key": "type",
+							"value": "readBarangKeluar"
+						},
+						{
+							"key": "limit",
+							"value": "50"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseURL",
+			"value": "",
+			"type": "default"
+		}
+	]
+}
