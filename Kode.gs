@@ -414,8 +414,10 @@ function addBarangMasuk({
   createdBy = "",
 }) {
   const sheet = _(SHEETS.bMasuk);
-  const id_bm = nextDailyId(sheet, "id_bm", "bm"); // <-- ID unik harian
+  const id_bm = nextDailyId(sheet, "id_bm", "bm");
   const createdAt = nowISO();
+
+  // Tambahkan ke sheet barangMasuk
   appendByObject(SHEETS.bMasuk, {
     id_bm,
     tanggal,
@@ -427,11 +429,64 @@ function addBarangMasuk({
     createdAt,
     createdBy,
   });
+
+  // Cek apakah barang sudah ada di masterBarang
+  const existingRow = findRowByKey(SHEETS.mBarang, "kodeBarang", kodeBarang);
+
+  if (existingRow === -1) {
+    // Barang belum ada, tambahkan ke masterBarang dengan stok awal = jumlah
+    appendByObject(SHEETS.mBarang, {
+      kodeBarang,
+      namaBarang,
+      satuan,
+      stok: jumlah,
+      createdAt: nowISO(),
+      createdBy: createdBy,
+      updatedBy: createdBy,
+    });
+
+    logAudit({
+      username: createdBy,
+      action: "AUTO_CREATE_MASTER_BARANG",
+      details: `Auto-create masterBarang ${kodeBarang} dari barang masuk ${id_bm}`,
+    });
+  } else {
+    // Barang sudah ada, update stok dengan menambahkan jumlah
+    const sheetMaster = _(SHEETS.mBarang);
+    const { headers, map } = getHeaderIndexMap(sheetMaster);
+    const stokColIdx = map["stok"];
+
+    if (stokColIdx != null) {
+      const currentStok =
+        sheetMaster.getRange(existingRow, stokColIdx + 1).getValue() || 0;
+      const newStok = Number(currentStok) + Number(jumlah);
+
+      sheetMaster.getRange(existingRow, stokColIdx + 1).setValue(newStok);
+
+      // Update updatedBy dan updatedAt
+      const updatedByIdx = map["updatedBy"];
+      const updatedAtIdx = map["updatedAt"];
+      if (updatedByIdx != null) {
+        sheetMaster.getRange(existingRow, updatedByIdx + 1).setValue(createdBy);
+      }
+      if (updatedAtIdx != null) {
+        sheetMaster.getRange(existingRow, updatedAtIdx + 1).setValue(nowISO());
+      }
+
+      logAudit({
+        username: createdBy,
+        action: "AUTO_UPDATE_STOK_MASTER_BARANG",
+        details: `Update stok ${kodeBarang} dari ${currentStok} menjadi ${newStok} (BM#${id_bm})`,
+      });
+    }
+  }
+
   logAudit({
     username: createdBy,
     action: "CREATE_BM",
     details: `BM#${id_bm} ${kodeBarang} (${jumlah} ${satuan})`,
   });
+
   return { ok: true, id_bm };
 }
 
