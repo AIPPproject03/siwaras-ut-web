@@ -168,29 +168,87 @@
                     <input type="date" id="tanggal" class="form-control" required />
                 </div>
 
-                <div class="form-group">
-                    <label for="kodeBarang">Kode Barang</label>
-                    <input type="text" id="kodeBarang" class="form-control" required
-                        placeholder="Masukkan kode barang" />
-                    <small class="form-hint">Kode unik untuk identifikasi barang</small>
+                <!-- Mode Selection -->
+                <div class="form-group" id="modeSelectionGroup">
+                    <label>Mode Input Barang</label>
+                    <div class="mode-selection">
+                        <label class="mode-option">
+                            <input type="radio" name="inputMode" value="new" checked
+                                onchange="switchInputMode('new')" />
+                            <span>Barang Baru</span>
+                        </label>
+                        <label class="mode-option">
+                            <input type="radio" name="inputMode" value="existing"
+                                onchange="switchInputMode('existing')" />
+                            <span>Barang Existing</span>
+                        </label>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="namaBarang">Nama Barang</label>
-                    <input type="text" id="namaBarang" class="form-control" required
-                        placeholder="Masukkan nama barang" />
+                <!-- Existing Barang Selection (Hidden by default) -->
+                <div class="form-group" id="existingBarangGroup" style="display: none;">
+                    <label for="existingBarang">Pilih Barang</label>
+                    <select id="existingBarang" class="form-control" onchange="fillExistingBarangData()">
+                        <option value="">-- Pilih Barang --</option>
+                    </select>
+                    <small class="form-hint">Pilih barang yang sudah ada untuk menambah stok</small>
                 </div>
 
-                <div class="form-row">
+                <!-- New Barang Input (Visible by default) -->
+                <div id="newBarangGroup">
                     <div class="form-group">
-                        <label for="jumlah">Jumlah</label>
-                        <input type="number" id="jumlah" class="form-control" required min="1" placeholder="0" />
+                        <label for="kodeBarang">Kode Barang</label>
+                        <input type="text" id="kodeBarang" class="form-control" required
+                            placeholder="Masukkan kode barang" />
+                        <small class="form-hint">Kode unik untuk identifikasi barang</small>
                     </div>
 
                     <div class="form-group">
-                        <label for="satuan">Satuan</label>
-                        <input type="text" id="satuan" class="form-control" required
-                            placeholder="Unit, Pcs, Box, dll" />
+                        <label for="namaBarang">Nama Barang</label>
+                        <input type="text" id="namaBarang" class="form-control" required
+                            placeholder="Masukkan nama barang" />
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="satuan">Satuan</label>
+                            <input type="text" id="satuan" class="form-control" required
+                                placeholder="Unit, Pcs, Box, dll" />
+                        </div>
+                        <div class="form-group">
+                            <label for="jumlah">Jumlah</label>
+                            <input type="number" id="jumlah" class="form-control" required min="1" placeholder="0" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Existing Barang Details (Hidden by default) -->
+                <div id="existingBarangDetails" style="display: none;">
+                    <div class="existing-info-card">
+                        <h4>Detail Barang</h4>
+                        <div class="info-row">
+                            <span class="label">Kode Barang:</span>
+                            <span class="value" id="displayKodeBarang">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Nama Barang:</span>
+                            <span class="value" id="displayNamaBarang">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Satuan:</span>
+                            <span class="value" id="displaySatuan">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Stok Saat Ini:</span>
+                            <span class="value" id="displayStok">0</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="jumlahExisting">Jumlah Tambah Stok</label>
+                        <input type="number" id="jumlahExisting" class="form-control" required min="1"
+                            placeholder="0" />
+                        <small class="form-hint">Jumlah barang yang akan ditambahkan ke stok</small>
                     </div>
                 </div>
 

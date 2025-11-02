@@ -1,4 +1,5 @@
 let allData = [];
+let masterBarangData = [];
 let sortAscending = true;
 const DB_TYPE = "sosprom";
 
@@ -15,6 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("tanggal").valueAsDate = new Date();
 
   loadData();
+  loadMasterBarang();
   setupSearch();
   setupFormSubmit();
 });
@@ -32,6 +34,95 @@ async function loadData() {
     alert("Gagal memuat data: " + error.message);
   } finally {
     Utils.showLoading(false);
+  }
+}
+
+async function loadMasterBarang() {
+  try {
+    const result = await API.get("readMasterBarang", { limit: 1000 }, DB_TYPE);
+    masterBarangData = result.rows || [];
+    populateExistingBarangDropdown();
+  } catch (error) {
+    console.error("Error loading master barang:", error);
+  }
+}
+
+function populateExistingBarangDropdown() {
+  const select = document.getElementById("existingBarang");
+  select.innerHTML = '<option value="">-- Pilih Barang --</option>';
+
+  masterBarangData.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.kodeBarang;
+    option.textContent = `${item.kodeBarang} - ${item.namaBarang} (Stok: ${item.stok} ${item.satuan})`;
+    option.dataset.namaBarang = item.namaBarang;
+    option.dataset.satuan = item.satuan;
+    option.dataset.stok = item.stok;
+    select.appendChild(option);
+  });
+}
+
+function switchInputMode(mode) {
+  const newBarangGroup = document.getElementById("newBarangGroup");
+  const existingBarangGroup = document.getElementById("existingBarangGroup");
+  const existingBarangDetails = document.getElementById(
+    "existingBarangDetails"
+  );
+
+  if (mode === "new") {
+    newBarangGroup.style.display = "block";
+    existingBarangGroup.style.display = "none";
+    existingBarangDetails.style.display = "none";
+
+    // Set required on new barang fields
+    document.getElementById("kodeBarang").required = true;
+    document.getElementById("namaBarang").required = true;
+    document.getElementById("satuan").required = true;
+    document.getElementById("jumlah").required = true;
+    document.getElementById("existingBarang").required = false;
+    document.getElementById("jumlahExisting").required = false;
+  } else {
+    newBarangGroup.style.display = "none";
+    existingBarangGroup.style.display = "block";
+
+    // Set required on existing barang fields
+    document.getElementById("kodeBarang").required = false;
+    document.getElementById("namaBarang").required = false;
+    document.getElementById("satuan").required = false;
+    document.getElementById("jumlah").required = false;
+    document.getElementById("existingBarang").required = true;
+    document.getElementById("jumlahExisting").required = true;
+  }
+
+  // Clear form
+  document.getElementById("existingBarang").value = "";
+  fillExistingBarangData();
+}
+
+function fillExistingBarangData() {
+  const select = document.getElementById("existingBarang");
+  const selectedOption = select.options[select.selectedIndex];
+  const existingBarangDetails = document.getElementById(
+    "existingBarangDetails"
+  );
+
+  if (select.value) {
+    // Show details
+    existingBarangDetails.style.display = "block";
+
+    // Fill display fields
+    document.getElementById("displayKodeBarang").textContent = select.value;
+    document.getElementById("displayNamaBarang").textContent =
+      selectedOption.dataset.namaBarang || "-";
+    document.getElementById("displaySatuan").textContent =
+      selectedOption.dataset.satuan || "-";
+    document.getElementById("displayStok").textContent =
+      selectedOption.dataset.stok || "0";
+
+    // Clear jumlah existing
+    document.getElementById("jumlahExisting").value = "";
+  } else {
+    existingBarangDetails.style.display = "none";
   }
 }
 
@@ -113,7 +204,14 @@ function openAddModal() {
   document.getElementById("editMode").value = "false";
   document.getElementById("barangMasukForm").reset();
   document.getElementById("tanggal").valueAsDate = new Date();
-  document.getElementById("kodeBarang").disabled = false;
+
+  // Reset to new barang mode
+  document.querySelector('input[name="inputMode"][value="new"]').checked = true;
+  switchInputMode("new");
+
+  // Show mode selection only in add mode
+  document.getElementById("modeSelectionGroup").style.display = "block";
+
   document.getElementById("modal").classList.add("show");
 }
 
@@ -124,6 +222,12 @@ function openEditModal(id_bm) {
   document.getElementById("modalTitle").textContent = "Edit Barang Masuk";
   document.getElementById("editMode").value = "true";
   document.getElementById("originalIdBm").value = id_bm;
+
+  // Hide mode selection in edit mode
+  document.getElementById("modeSelectionGroup").style.display = "none";
+
+  // Force to new barang mode for editing
+  switchInputMode("new");
 
   const tanggalValue = item.tanggal ? item.tanggal.split("T")[0] : "";
   document.getElementById("tanggal").value = tanggalValue;
@@ -140,6 +244,7 @@ function openEditModal(id_bm) {
 function closeModal() {
   document.getElementById("modal").classList.remove("show");
   document.getElementById("barangMasukForm").reset();
+  document.getElementById("kodeBarang").disabled = false;
 }
 
 function setupFormSubmit() {
@@ -150,22 +255,55 @@ function setupFormSubmit() {
     const editMode = document.getElementById("editMode").value === "true";
     const session = Auth.getSession();
 
-    const formData = {
-      tanggal: document.getElementById("tanggal").value,
-      kodeBarang: document
-        .getElementById("kodeBarang")
-        .value.trim()
-        .toUpperCase(),
-      namaBarang: document.getElementById("namaBarang").value.trim(),
-      jumlah: parseInt(document.getElementById("jumlah").value) || 0,
-      satuan: document.getElementById("satuan").value.trim(),
-      keterangan: document.getElementById("keterangan").value.trim(),
-      createdBy: session.username,
-      updatedBy: session.username,
-    };
+    // Check which mode is active
+    const inputMode =
+      document.querySelector('input[name="inputMode"]:checked')?.value || "new";
+
+    let formData;
 
     if (editMode) {
-      formData.id_bm = document.getElementById("originalIdBm").value;
+      // Edit mode - use new barang fields
+      formData = {
+        id_bm: document.getElementById("originalIdBm").value,
+        tanggal: document.getElementById("tanggal").value,
+        kodeBarang: document
+          .getElementById("kodeBarang")
+          .value.trim()
+          .toUpperCase(),
+        namaBarang: document.getElementById("namaBarang").value.trim(),
+        jumlah: parseInt(document.getElementById("jumlah").value) || 0,
+        satuan: document.getElementById("satuan").value.trim(),
+        keterangan: document.getElementById("keterangan").value.trim(),
+        updatedBy: session.username,
+      };
+    } else if (inputMode === "new") {
+      // New barang mode
+      formData = {
+        tanggal: document.getElementById("tanggal").value,
+        kodeBarang: document
+          .getElementById("kodeBarang")
+          .value.trim()
+          .toUpperCase(),
+        namaBarang: document.getElementById("namaBarang").value.trim(),
+        jumlah: parseInt(document.getElementById("jumlah").value) || 0,
+        satuan: document.getElementById("satuan").value.trim(),
+        keterangan: document.getElementById("keterangan").value.trim(),
+        createdBy: session.username,
+      };
+    } else {
+      // Existing barang mode
+      const select = document.getElementById("existingBarang");
+      const selectedOption = select.options[select.selectedIndex];
+
+      formData = {
+        tanggal: document.getElementById("tanggal").value,
+        kodeBarang: select.value.toUpperCase(),
+        namaBarang: selectedOption.dataset.namaBarang,
+        jumlah: parseInt(document.getElementById("jumlahExisting").value) || 0,
+        satuan: selectedOption.dataset.satuan,
+        keterangan: document.getElementById("keterangan").value.trim(),
+        createdBy: session.username,
+      };
     }
 
     Utils.showLoading(true);
@@ -186,15 +324,18 @@ function setupFormSubmit() {
           `Tambah barang masuk ${formData.kodeBarang} (${formData.jumlah} ${formData.satuan})`
         );
 
+        const mode = inputMode === "new" ? "baru" : "existing";
         alert(
           `Berhasil menambahkan barang masuk!\n` +
             `ID: ${result.id_bm}\n` +
+            `Mode: ${mode}\n` +
             `Barang "${formData.namaBarang}" telah ditambahkan ke stok.`
         );
       }
 
       closeModal();
       await loadData();
+      await loadMasterBarang(); // Refresh master barang list
     } catch (error) {
       console.error("Error saving data:", error);
       alert("Gagal menyimpan data: " + error.message);
