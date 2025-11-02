@@ -1,5 +1,6 @@
 let allData = [];
 let sortAscending = true;
+const DB_TYPE = "wisuda"; // Database type untuk Wisuda
 
 // Load data on page load
 document.addEventListener("DOMContentLoaded", async function () {
@@ -10,10 +11,22 @@ document.addEventListener("DOMContentLoaded", async function () {
 async function loadData() {
   Utils.showLoading(true);
   try {
-    // Fetch data from API
-    const masterBarang = await API.get("readMasterBarang", { limit: 1000 });
-    const barangMasuk = await API.get("readBarangMasuk", { limit: 1000 });
-    const barangKeluar = await API.get("readBarangKeluar", { limit: 1000 });
+    // Fetch data from Wisuda API
+    const masterBarang = await API.get(
+      "readMasterBarang",
+      { limit: 1000 },
+      DB_TYPE
+    );
+    const barangMasuk = await API.get(
+      "readBarangMasuk",
+      { limit: 1000 },
+      DB_TYPE
+    );
+    const barangKeluar = await API.get(
+      "readBarangKeluar",
+      { limit: 1000 },
+      DB_TYPE
+    );
 
     console.log("Master Barang:", masterBarang);
     console.log("Barang Masuk:", barangMasuk);

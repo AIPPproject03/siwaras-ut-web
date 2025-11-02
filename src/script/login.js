@@ -74,8 +74,8 @@ if (loginForm) {
     try {
       console.log("Calling API login...");
 
-      // Verify login against API
-      const result = await API.login(username, password);
+      // Verify login against API with correct database type
+      const result = await API.login(username, password, loginType);
 
       console.log("Login result:", result);
 
@@ -95,8 +95,8 @@ if (loginForm) {
 
         console.log("Role:", role);
 
-        // Set session with admin data
-        Auth.setSession(username, role, result.admin);
+        // Set session with admin data and database type
+        Auth.setSession(username, role, result.admin, loginType);
 
         // Log successful login
         try {
@@ -116,13 +116,21 @@ if (loginForm) {
         // Redirect based on login mode and type
         setTimeout(() => {
           if (loginMode === "admin") {
-            // Admin mode - redirect to dashboard
-            console.log("Redirecting to dashboard...");
-            window.location.href = `dashboard.html?type=${loginType}`;
+            // Admin mode - redirect to admin dashboard
+            console.log("Redirecting to admin dashboard...");
+            if (loginType === "sosprom") {
+              window.location.href = "sosprom/adminSosprom.html";
+            } else {
+              window.location.href = "wisuda/adminWisuda.html";
+            }
           } else {
             // Guest mode - redirect to guest page (read-only)
             console.log("Redirecting to guest page...");
-            window.location.href = `guest.html?type=${loginType}`;
+            if (loginType === "sosprom") {
+              window.location.href = "guestSosprom.html";
+            } else {
+              window.location.href = "guestWisuda.html";
+            }
           }
         }, 500);
       } else {
@@ -136,11 +144,15 @@ if (loginForm) {
 
       // Log failed login attempt
       try {
-        await API.post("audit_Log", {
-          username: username,
-          action: `LOGIN_${loginType.toUpperCase()}_${loginMode.toUpperCase()}_FAILED`,
-          details: `Login gagal: ${error.message} (${username})`,
-        });
+        await API.post(
+          "audit_Log",
+          {
+            username: username,
+            action: `LOGIN_${loginType.toUpperCase()}_${loginMode.toUpperCase()}_FAILED`,
+            details: `Login gagal: ${error.message} (${username})`,
+          },
+          loginType
+        );
       } catch (auditError) {
         console.error("Audit log error:", auditError);
       }
@@ -159,13 +171,17 @@ if (Auth.isLoggedIn()) {
   console.log("Session:", session);
 
   // Redirect based on role
-  if (session.role.startsWith("admin-")) {
-    const type = session.role.split("-")[1];
-    console.log("Redirecting logged in admin...");
-    window.location.href = `dashboard.html?type=${type}`;
-  } else if (session.role.startsWith("guest-")) {
-    const type = session.role.split("-")[1];
-    console.log("Redirecting logged in guest...");
-    window.location.href = `guest.html?type=${type}`;
+  if (session.role === "admin-sosprom") {
+    console.log("Redirecting logged in admin sosprom...");
+    window.location.href = "sosprom/adminSosprom.html";
+  } else if (session.role === "admin-wisuda") {
+    console.log("Redirecting logged in admin wisuda...");
+    window.location.href = "wisuda/adminWisuda.html";
+  } else if (session.role === "guest-sosprom") {
+    console.log("Redirecting logged in guest sosprom...");
+    window.location.href = "guestSosprom.html";
+  } else if (session.role === "guest-wisuda") {
+    console.log("Redirecting logged in guest wisuda...");
+    window.location.href = "guestWisuda.html";
   }
 }

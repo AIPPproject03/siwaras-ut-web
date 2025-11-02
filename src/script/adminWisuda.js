@@ -1,17 +1,24 @@
 let allData = [];
 let sortAscending = true;
-const DB_TYPE = "sosprom"; // Database type untuk Sosprom
+const DB_TYPE = "wisuda"; // Database type untuk Wisuda
 
-// Load data on page load
-document.addEventListener("DOMContentLoaded", async function () {
-  await loadData();
+// Check authentication
+document.addEventListener("DOMContentLoaded", function () {
+  const session = Auth.getSession();
+  if (!session.username || session.role !== "admin-wisuda") {
+    alert("Anda harus login sebagai Admin Wisuda!");
+    window.location.href = "../../index.html";
+    return;
+  }
+
+  loadDashboardData();
   setupSearch();
 });
 
-async function loadData() {
+async function loadDashboardData() {
   Utils.showLoading(true);
   try {
-    // Fetch data from Sosprom API
+    // Fetch all data from Wisuda database
     const masterBarang = await API.get(
       "readMasterBarang",
       { limit: 1000 },
@@ -45,6 +52,9 @@ async function loadData() {
 
     // Render table
     renderTable(allData);
+
+    // Initialize charts (placeholder for now)
+    initCharts();
   } catch (error) {
     console.error("Error loading data:", error);
     alert("Gagal memuat data: " + error.message);
@@ -106,9 +116,16 @@ function toggleSort() {
   renderTable(sorted);
 }
 
+function initCharts() {
+  // Placeholder for charts
+  // TODO: Implement with Chart.js or similar library
+  console.log("Charts initialized (placeholder)");
+}
+
 function handleLogout() {
   if (confirm("Apakah Anda yakin ingin keluar?")) {
+    Auth.logAudit("LOGOUT_ADMIN_WISUDA", "Admin Wisuda logout");
     Auth.clearSession();
-    window.location.href = "../index.html";
+    window.location.href = "../../index.html";
   }
 }
