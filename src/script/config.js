@@ -16,6 +16,10 @@ const API_CONFIG = {
     readMasterBarang: "readMasterBarang",
     readBarangMasuk: "readBarangMasuk",
     readBarangKeluar: "readBarangKeluar",
+    // Tanda Terima
+    readTandaTerima: "readTandaTerima",
+    readTandaTerimaBarang: "readTandaTerimaBarang",
+    readTandaTerimaFormData: "readTandaTerimaFormData",
 
     // WRITE Operations (POST)
     login: "login",
@@ -29,6 +33,13 @@ const API_CONFIG = {
     createBarangKeluar: "barangKeluar",
     updateBarangKeluar: "updateBarangKeluar",
     deleteBarangKeluar: "deleteBarangKeluar",
+    // Tanda Terima
+    createTandaTerima: "tandaTerima",
+    updateTandaTerimaStatus: "updateTandaTerimaStatus",
+    deleteTandaTerima: "deleteTandaTerima",
+    addTandaTerimaBarang: "tandaTerimaBarang",
+    deleteTandaTerimaBarang: "deleteTandaTerimaBarang",
+    updateTandaTerimaFormData: "updateTandaTerimaFormData",
     auditLog: "audit_Log",
   },
 };

@@ -10,6 +10,10 @@ const SHEETS = {
   mBarang: "masterBarang",
   bMasuk: "barangMasuk",
   bKeluar: "barangKeluar",
+  // Tambahan untuk Tanda Terima
+  tandaTerima: "tandaTerima",
+  ttBarang: "tandaTerimaBarang",
+  ttFormData: "tandaTerimaFormData",
 };
 
 function _(name) {
@@ -543,8 +547,56 @@ function addBarangKeluar({
   createdBy = "",
 }) {
   const sheet = _(SHEETS.bKeluar);
-  const id_bk = nextDailyId(sheet, "id_bk", "bk"); // <-- ID unik harian
+  const id_bk = nextDailyId(sheet, "id_bk", "bk");
   const createdAt = nowISO();
+
+  // Cek stok di masterBarang
+  const existingRow = findRowByKey(SHEETS.mBarang, "kodeBarang", kodeBarang);
+
+  if (existingRow === -1) {
+    throw new Error(
+      `Barang dengan kode ${kodeBarang} tidak ditemukan di master barang. Tidak bisa mengeluarkan barang yang belum terdaftar.`
+    );
+  }
+
+  // Ambil stok saat ini
+  const sheetMaster = _(SHEETS.mBarang);
+  const { headers, map } = getHeaderIndexMap(sheetMaster);
+  const stokColIdx = map["stok"];
+
+  if (stokColIdx != null) {
+    const currentStok =
+      sheetMaster.getRange(existingRow, stokColIdx + 1).getValue() || 0;
+    const newStok = Number(currentStok) - Number(jumlah);
+
+    // Validasi: stok tidak boleh negatif
+    if (newStok < 0) {
+      throw new Error(
+        `Stok tidak cukup! Stok tersedia: ${currentStok} ${satuan}, diminta: ${jumlah} ${satuan}`
+      );
+    }
+
+    // Update stok di masterBarang
+    sheetMaster.getRange(existingRow, stokColIdx + 1).setValue(newStok);
+
+    // Update updatedBy dan updatedAt
+    const updatedByIdx = map["updatedBy"];
+    const updatedAtIdx = map["updatedAt"];
+    if (updatedByIdx != null) {
+      sheetMaster.getRange(existingRow, updatedByIdx + 1).setValue(createdBy);
+    }
+    if (updatedAtIdx != null) {
+      sheetMaster.getRange(existingRow, updatedAtIdx + 1).setValue(nowISO());
+    }
+
+    logAudit({
+      username: createdBy,
+      action: "AUTO_DEDUCT_STOK_MASTER_BARANG",
+      details: `Kurangi stok ${kodeBarang} dari ${currentStok} menjadi ${newStok} (BK#${id_bk})`,
+    });
+  }
+
+  // Tambahkan ke sheet barangKeluar
   appendByObject(SHEETS.bKeluar, {
     id_bk,
     tanggal,
@@ -557,13 +609,16 @@ function addBarangKeluar({
     createdAt,
     createdBy,
   });
+
   logAudit({
     username: createdBy,
     action: "CREATE_BK",
     details: `BK#${id_bk} ${kodeBarang} -> ${penerima} (${event})`,
   });
+
   return { ok: true, id_bk };
 }
+
 // PATCH/UPDATE barangKeluar by id_bk
 function updateBarangKeluar(data) {
   const { id_bk, ...rest } = data || {};
@@ -584,15 +639,62 @@ function updateBarangKeluar(data) {
 // DELETE barangKeluar by id_bk
 function deleteBarangKeluar({ id_bk, deletedBy = "" }) {
   if (!id_bk) throw new Error("id_bk wajib diisi untuk delete");
+
+  // Ambil data barang keluar sebelum dihapus
+  const sheet = _(SHEETS.bKeluar);
   const row = findRowByKey(SHEETS.bKeluar, "id_bk", id_bk);
   if (row === -1)
     throw new Error(`barangKeluar dengan id_bk ${id_bk} tidak ditemukan`);
-  _(SHEETS.bKeluar).deleteRow(row);
+
+  // Ambil data untuk mengembalikan stok
+  const { headers, map } = getHeaderIndexMap(sheet);
+  const kodeBarangIdx = map["kodeBarang"];
+  const jumlahIdx = map["jumlah"];
+
+  const kodeBarang = sheet.getRange(row, kodeBarangIdx + 1).getValue();
+  const jumlah = sheet.getRange(row, jumlahIdx + 1).getValue() || 0;
+
+  // Kembalikan stok ke masterBarang
+  const masterRow = findRowByKey(SHEETS.mBarang, "kodeBarang", kodeBarang);
+  if (masterRow !== -1) {
+    const sheetMaster = _(SHEETS.mBarang);
+    const masterMap = getHeaderIndexMap(sheetMaster).map;
+    const stokColIdx = masterMap["stok"];
+
+    if (stokColIdx != null) {
+      const currentStok =
+        sheetMaster.getRange(masterRow, stokColIdx + 1).getValue() || 0;
+      const newStok = Number(currentStok) + Number(jumlah);
+
+      sheetMaster.getRange(masterRow, stokColIdx + 1).setValue(newStok);
+
+      // Update updatedBy dan updatedAt
+      const updatedByIdx = masterMap["updatedBy"];
+      const updatedAtIdx = masterMap["updatedAt"];
+      if (updatedByIdx != null) {
+        sheetMaster.getRange(masterRow, updatedByIdx + 1).setValue(deletedBy);
+      }
+      if (updatedAtIdx != null) {
+        sheetMaster.getRange(masterRow, updatedAtIdx + 1).setValue(nowISO());
+      }
+
+      logAudit({
+        username: deletedBy,
+        action: "AUTO_RESTORE_STOK_MASTER_BARANG",
+        details: `Kembalikan stok ${kodeBarang} dari ${currentStok} menjadi ${newStok} (hapus BK#${id_bk})`,
+      });
+    }
+  }
+
+  // Hapus data barang keluar
+  sheet.deleteRow(row);
+
   logAudit({
     username: deletedBy,
     action: "DELETE_BK",
     details: `Hapus BK#${id_bk}`,
   });
+
   return { ok: true, id_bk, deleted: true };
 }
 
@@ -657,14 +759,32 @@ function doPost(e) {
       case "deleteBarangKeluar":
         result = deleteBarangKeluar(data);
         break;
-      // READ AUDIT LOG
-      case "readAudit":
-        result = readAudit((data && data.limit) || 100);
+      // TANDA TERIMA
+      case "tandaTerima":
+        result = addTandaTerima(data);
         break;
+      case "updateTandaTerimaStatus":
+        result = updateTandaTerimaStatus(data);
+        break;
+      case "deleteTandaTerima":
+        result = deleteTandaTerima(data);
+        break;
+
+      // TANDA TERIMA BARANG
+      case "tandaTerimaBarang":
+        result = addTandaTerimaBarang(data);
+        break;
+      case "deleteTandaTerimaBarang":
+        result = deleteTandaTerimaBarang(data);
+        break;
+
+      // TANDA TERIMA FORM DATA
+      case "updateTandaTerimaFormData":
+        result = updateTandaTerimaFormData(data);
+        break;
+
       default:
-        throw new Error(
-          "Tipe tidak dikenali. Gunakan: admin | audit_Log | masterBarang | barangMasuk | barangKeluar"
-        );
+        throw new Error("Tipe tidak dikenali");
     }
 
     return ContentService.createTextOutput(
@@ -680,111 +800,331 @@ function doPost(e) {
 }
 
 function doGet(e) {
-  try {
-    // --- kumpulkan parameter ---
-    const params = e && e.parameter ? e.parameter : {};
-    let type = (params.type || params.t || "").toString().trim();
-    let limitStr = (params.limit || "").toString().trim();
+  const params = (e && e.parameter) || {};
+  const type = (params.type || "").toString();
+  const limitStr = params.limit || "1000";
 
-    // Fallback kalau e.parameter kosong (beberapa kasus Postman/URL encoding)
-    if (
-      !type &&
-      e &&
-      typeof e.queryString === "string" &&
-      e.queryString.length
-    ) {
-      const qs = e.queryString.split("&");
-      const kv = {};
-      qs.forEach((p) => {
-        const [k, v] = p.split("=");
-        if (k) kv[decodeURIComponent(k)] = v ? decodeURIComponent(v) : "";
-      });
-      if (!type) type = (kv.type || kv.t || "").toString().trim();
-      if (!limitStr) limitStr = (kv.limit || "").toString().trim();
-    }
-
-    // Healthcheck jika tanpa type
-    if (!type) {
+  // Router GET
+  switch (type) {
+    case "readAudit": {
+      const n = parseInt(limitStr, 10);
+      const limit = Number.isFinite(n) && n > 0 ? n : 100;
+      const result = readAudit(limit);
       return ContentService.createTextOutput(
-        JSON.stringify({
-          ok: true,
-          service: "SIWARAS Apps Script",
-          time: nowISO(),
-          hint: "Untuk readAudit gunakan ?type=readAudit&limit=50",
-          received: {
-            parameter: e && e.parameter ? e.parameter : null,
-            queryString:
-              e && typeof e.queryString === "string" ? e.queryString : null,
-          },
-        })
+        JSON.stringify({ ok: true, type, result })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+    case "readAdmin": {
+      // params: username (optional), limit (optional), showPassword (optional 1/0)
+      const username = (params.username || "").toString().trim();
+      const showPassword =
+        params.showPassword === "1" || params.showPassword === "true";
+      const n = parseInt(limitStr, 10);
+      const limit = Number.isFinite(n) && n > 0 ? n : 1000;
+
+      let result;
+      if (username) {
+        result = readAdminByUsername(username, showPassword);
+      } else {
+        result = readAdminAll(limit, showPassword);
+      }
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true, type: "readAdmin", result })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+    case "readMasterBarang": {
+      const n = parseInt(limitStr, 10);
+      const limit = Number.isFinite(n) && n > 0 ? n : 1000;
+      const result = readMasterBarang(limit);
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true, type, result })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+    case "readBarangMasuk": {
+      const n = parseInt(limitStr, 10);
+      const limit = Number.isFinite(n) && n > 0 ? n : 1000;
+      const result = readBarangMasuk(limit);
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true, type, result })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+    case "readBarangKeluar": {
+      const n = parseInt(limitStr, 10);
+      const limit = Number.isFinite(n) && n > 0 ? n : 1000;
+      const result = readBarangKeluar(limit);
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true, type, result })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+    case "readTandaTerima": {
+      const n = parseInt(limitStr, 10);
+      const limit = Number.isFinite(n) && n > 0 ? n : 1000;
+      const result = readTandaTerima(limit);
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true, type, result })
       ).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // Router GET
-    switch (type) {
-      case "readAudit": {
-        const n = parseInt(limitStr, 10);
-        const limit = Number.isFinite(n) && n > 0 ? n : 100;
-        const result = readAudit(limit);
+    case "readTandaTerimaBarang": {
+      const id_tt = params.id_tt || "";
+      if (!id_tt) {
         return ContentService.createTextOutput(
-          JSON.stringify({ ok: true, type, result })
+          JSON.stringify({ ok: false, error: "id_tt wajib diisi" })
         ).setMimeType(ContentService.MimeType.JSON);
       }
-      case "readAdmin": {
-        // params: username (optional), limit (optional), showPassword (optional 1/0)
-        const username = (params.username || "").toString().trim();
-        const showPassword =
-          params.showPassword === "1" || params.showPassword === "true";
-        const n = parseInt(limitStr, 10);
-        const limit = Number.isFinite(n) && n > 0 ? n : 1000;
-
-        let result;
-        if (username) {
-          result = readAdminByUsername(username, showPassword);
-        } else {
-          result = readAdminAll(limit, showPassword);
-        }
-        return ContentService.createTextOutput(
-          JSON.stringify({ ok: true, type: "readAdmin", result })
-        ).setMimeType(ContentService.MimeType.JSON);
-      }
-      case "readMasterBarang": {
-        const n = parseInt(limitStr, 10);
-        const limit = Number.isFinite(n) && n > 0 ? n : 1000;
-        const result = readMasterBarang(limit);
-        return ContentService.createTextOutput(
-          JSON.stringify({ ok: true, type, result })
-        ).setMimeType(ContentService.MimeType.JSON);
-      }
-      case "readBarangMasuk": {
-        const n = parseInt(limitStr, 10);
-        const limit = Number.isFinite(n) && n > 0 ? n : 1000;
-        const result = readBarangMasuk(limit);
-        return ContentService.createTextOutput(
-          JSON.stringify({ ok: true, type, result })
-        ).setMimeType(ContentService.MimeType.JSON);
-      }
-      case "readBarangKeluar": {
-        const n = parseInt(limitStr, 10);
-        const limit = Number.isFinite(n) && n > 0 ? n : 1000;
-        const result = readBarangKeluar(limit);
-        return ContentService.createTextOutput(
-          JSON.stringify({ ok: true, type, result })
-        ).setMimeType(ContentService.MimeType.JSON);
-      }
-      default:
-        return ContentService.createTextOutput(
-          JSON.stringify({
-            ok: false,
-            error:
-              "Tipe GET tidak dikenali. Gunakan: readAudit | readMasterBarang | readBarangMasuk | readBarangKeluar",
-            receivedType: type,
-          })
-        ).setMimeType(ContentService.MimeType.JSON);
+      const result = readTandaTerimaBarang({ id_tt });
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true, type, result })
+      ).setMimeType(ContentService.MimeType.JSON);
     }
-  } catch (err) {
-    return ContentService.createTextOutput(
-      JSON.stringify({ ok: false, error: String(err) })
-    ).setMimeType(ContentService.MimeType.JSON);
+
+    case "readTandaTerimaFormData": {
+      const id_tt = params.id_tt || "";
+      if (!id_tt) {
+        return ContentService.createTextOutput(
+          JSON.stringify({ ok: false, error: "id_tt wajib diisi" })
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+      const result = readTandaTerimaFormData({ id_tt });
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true, type, result })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    default:
+      return ContentService.createTextOutput(
+        JSON.stringify({
+          ok: false,
+          error: "Tipe GET tidak dikenali",
+          receivedType: type,
+        })
+      ).setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+/** =======================
+ *  TANDA TERIMA BARANG KELUAR
+ *  ======================= */
+
+// ========== Tanda Terima (Header) ==========
+// Header: id_tt | tanggal | keterangan | status | createdAt | createdBy | updatedBy
+function addTandaTerima({ tanggal, keterangan = "", createdBy = "" }) {
+  const sheet = _(SHEETS.tandaTerima);
+  const id_tt = nextDailyId(sheet, "id_tt", "tt");
+  const createdAt = nowISO();
+
+  appendByObject(SHEETS.tandaTerima, {
+    id_tt,
+    tanggal,
+    keterangan,
+    status: "Draft", // Draft atau Selesai
+    createdAt,
+    createdBy,
+    updatedBy: "",
+  });
+
+  logAudit({
+    username: createdBy,
+    action: "CREATE_TANDA_TERIMA",
+    details: `TT#${id_tt} - ${keterangan}`,
+  });
+
+  return { ok: true, id_tt };
+}
+
+function readTandaTerima(limit = 1000) {
+  const { rows } = readAll(SHEETS.tandaTerima, limit);
+  return { rows };
+}
+
+function updateTandaTerimaStatus(data) {
+  const { id_tt, status, updatedBy = "" } = data || {};
+  if (!id_tt) throw new Error("id_tt wajib diisi untuk update");
+
+  const row = findRowByKey(SHEETS.tandaTerima, "id_tt", id_tt);
+  if (row === -1) throw new Error(`Tanda terima ${id_tt} tidak ditemukan`);
+
+  const updateData = {
+    status: status,
+    updatedBy: updatedBy,
+    updatedAt: nowISO(),
+  };
+
+  updateRowByObject(SHEETS.tandaTerima, row, updateData);
+
+  logAudit({
+    username: updatedBy,
+    action: "UPDATE_STATUS_TANDA_TERIMA",
+    details: `TT#${id_tt} -> Status: ${status}`,
+  });
+
+  return { ok: true, id_tt, status };
+}
+
+function deleteTandaTerima({ id_tt, deletedBy = "" }) {
+  if (!id_tt) throw new Error("id_tt wajib diisi untuk delete");
+
+  const row = findRowByKey(SHEETS.tandaTerima, "id_tt", id_tt);
+  if (row === -1) throw new Error(`Tanda terima ${id_tt} tidak ditemukan`);
+
+  // Delete barang list
+  const barangSheet = _(SHEETS.ttBarang);
+  const barangData = barangSheet.getDataRange().getValues();
+  const headers = barangData[0];
+  const idTtIndex = headers.indexOf("id_tt");
+
+  for (let i = barangData.length - 1; i >= 1; i--) {
+    if (barangData[i][idTtIndex] === id_tt) {
+      barangSheet.deleteRow(i + 1);
+    }
+  }
+
+  // Delete form data
+  const formRow = findRowByKey(SHEETS.ttFormData, "id_tt", id_tt);
+  if (formRow !== -1) {
+    _(SHEETS.ttFormData).deleteRow(formRow);
+  }
+
+  // Delete tanda terima
+  _(SHEETS.tandaTerima).deleteRow(row);
+
+  logAudit({
+    username: deletedBy,
+    action: "DELETE_TANDA_TERIMA",
+    details: `Hapus TT#${id_tt}`,
+  });
+
+  return { ok: true, id_tt, deleted: true };
+}
+
+// ========== Tanda Terima Barang (Detail) ==========
+// Header: id_tt | kodeBarang | namaBarang | jumlah | satuan | createdAt
+function addTandaTerimaBarang({
+  id_tt,
+  kodeBarang,
+  namaBarang,
+  jumlah,
+  satuan,
+}) {
+  const createdAt = nowISO();
+
+  appendByObject(SHEETS.ttBarang, {
+    id_tt,
+    kodeBarang,
+    namaBarang,
+    jumlah,
+    satuan,
+    createdAt,
+  });
+
+  logAudit({
+    username: "",
+    action: "ADD_BARANG_TO_TT",
+    details: `TT#${id_tt} + ${kodeBarang} (${jumlah} ${satuan})`,
+  });
+
+  return { ok: true, id_tt, kodeBarang };
+}
+
+function readTandaTerimaBarang({ id_tt }) {
+  if (!id_tt) throw new Error("id_tt wajib diisi");
+
+  const sheet = _(SHEETS.ttBarang);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idTtIndex = headers.indexOf("id_tt");
+
+  const rows = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][idTtIndex] === id_tt) {
+      const obj = {};
+      headers.forEach((h, idx) => (obj[String(h)] = data[i][idx]));
+      rows.push(obj);
+    }
+  }
+
+  return { rows };
+}
+
+function deleteTandaTerimaBarang({ id_tt, kodeBarang }) {
+  if (!id_tt || !kodeBarang)
+    throw new Error("id_tt dan kodeBarang wajib diisi");
+
+  const sheet = _(SHEETS.ttBarang);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idTtIndex = headers.indexOf("id_tt");
+  const kodeBarangIndex = headers.indexOf("kodeBarang");
+
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (
+      data[i][idTtIndex] === id_tt &&
+      data[i][kodeBarangIndex] === kodeBarang
+    ) {
+      sheet.deleteRow(i + 1);
+      break;
+    }
+  }
+
+  logAudit({
+    username: "",
+    action: "DELETE_BARANG_FROM_TT",
+    details: `TT#${id_tt} - ${kodeBarang}`,
+  });
+
+  return { ok: true, id_tt, kodeBarang, deleted: true };
+}
+
+// ========== Tanda Terima Form Data (Penerima) ==========
+// Header: id_tt | nama | nip | keterangan | updatedAt
+function updateTandaTerimaFormData({
+  id_tt,
+  nama = "",
+  nip = "",
+  keterangan = "",
+}) {
+  if (!id_tt) throw new Error("id_tt wajib diisi");
+
+  const row = findRowByKey(SHEETS.ttFormData, "id_tt", id_tt);
+  const updatedAt = nowISO();
+
+  if (row === -1) {
+    // Create new
+    appendByObject(SHEETS.ttFormData, {
+      id_tt,
+      nama,
+      nip,
+      keterangan,
+      updatedAt,
+    });
+  } else {
+    // Update existing
+    updateRowByObject(SHEETS.ttFormData, row, {
+      nama,
+      nip,
+      keterangan,
+      updatedAt,
+    });
+  }
+
+  return { ok: true, id_tt };
+}
+
+function readTandaTerimaFormData({ id_tt }) {
+  if (!id_tt) throw new Error("id_tt wajib diisi");
+
+  const row = findRowByKey(SHEETS.ttFormData, "id_tt", id_tt);
+
+  if (row === -1) {
+    return { rows: [] };
+  }
+
+  const sheet = _(SHEETS.ttFormData);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const values = sheet.getRange(row, 1, 1, headers.length).getValues()[0];
+
+  const obj = {};
+  headers.forEach((h, i) => (obj[String(h)] = values[i]));
+
+  return { rows: [obj] };
 }
