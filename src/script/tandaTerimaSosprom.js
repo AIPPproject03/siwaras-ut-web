@@ -658,57 +658,56 @@ async function generatePDF() {
     // Configuration
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
+    const margin = 20;
     let yPos = margin;
 
-    // Helper function to add text - ENSURE STRING CONVERSION
-    const addText = (text, x, y, options = {}) => {
-      // Convert to string if not already
-      text = String(text || "");
+    // ===== LOAD AND ADD LOGO =====
+    const logoBase64 = await loadLogoAsBase64();
 
-      doc.setFontSize(options.fontSize || 11);
-      doc.setFont(options.font || "helvetica", options.style || "normal");
-      if (options.align === "center") {
-        const textWidth = doc.getTextWidth(text);
-        x = (pageWidth - textWidth) / 2;
-      } else if (options.align === "right") {
-        const textWidth = doc.getTextWidth(text);
-        x = pageWidth - margin - textWidth;
-      }
-      doc.text(text, x, y);
-      return y + (options.lineHeight || 7);
-    };
+    // ===== HEADER WITH LOGO =====
+    const logoSize = 20; // Reduced from 25 to 20
+    const logoYPos = yPos + 2; // Adjust vertical position
 
-    // ===== HEADER =====
+    if (logoBase64) {
+      // Add logo on the left with consistent aspect ratio
+      doc.addImage(logoBase64, "PNG", margin, logoYPos, logoSize, logoSize);
+    }
+
+    // ===== HEADER TEXT (beside logo) =====
+    const headerStartX = margin + logoSize + 5; // Space after logo
+    const headerStartY = yPos + 3;
+
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    yPos = addText("UNIVERSITAS TERBUKA", 0, yPos + 5, {
-      align: "center",
-      fontSize: 16,
-    });
+    doc.text("UNIVERSITAS TERBUKA", headerStartX, headerStartY);
 
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    yPos = addText(
-      "SIWARAS - Sistem Inventori Wisuda & Rangkaian Sosprom",
-      0,
-      yPos,
-      { align: "center", fontSize: 12 }
+    doc.text("UPBJJ-UT PALANGKA RAYA", headerStartX, headerStartY + 6);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "italic");
+    doc.text(
+      "Sistem Inventori Wisuda & Rangkaian Sosprom (SIWARAS)",
+      headerStartX,
+      headerStartY + 11
     );
 
+    // Move yPos past the header section
+    yPos = Math.max(logoYPos + logoSize, headerStartY + 11) + 5;
+
     // Line separator
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPos + 2, pageWidth - margin, yPos + 2);
+    doc.setLineWidth(0.8);
+    doc.setDrawColor(41, 128, 185); // Blue color
+    doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 10;
 
     // ===== TITLE =====
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    yPos = addText("TANDA TERIMA BARANG KELUAR", 0, yPos, {
-      align: "center",
-      fontSize: 14,
-      lineHeight: 10,
-    });
+    const titleWidth = doc.getTextWidth("TANDA TERIMA BARANG KELUAR");
+    doc.text("TANDA TERIMA BARANG KELUAR", (pageWidth - titleWidth) / 2, yPos);
+    yPos += 10;
 
     // ===== DOCUMENT INFO =====
     doc.setFontSize(10);
@@ -725,15 +724,26 @@ async function generatePDF() {
       ["Status", ":", String(currentTandaTerima.status || "-")],
     ];
 
-    let infoY = yPos;
     infoData.forEach((row) => {
-      doc.text(String(row[0]), margin, infoY);
-      doc.text(String(row[1]), margin + 40, infoY);
-      doc.text(String(row[2]), margin + 45, infoY);
-      infoY += 6;
+      doc.text(String(row[0]), margin, yPos);
+      doc.text(String(row[1]), margin + 40, yPos);
+
+      // Wrap long text if needed
+      const textValue = String(row[2]);
+      if (textValue.length > 50) {
+        const splitText = doc.splitTextToSize(
+          textValue,
+          pageWidth - margin - 50
+        );
+        doc.text(splitText, margin + 45, yPos);
+        yPos += splitText.length * 5;
+      } else {
+        doc.text(textValue, margin + 45, yPos);
+        yPos += 6;
+      }
     });
 
-    yPos = infoY + 5;
+    yPos += 5;
 
     // ===== TABLE BARANG =====
     doc.setFontSize(11);
@@ -741,7 +751,7 @@ async function generatePDF() {
     doc.text("Daftar Barang:", margin, yPos);
     yPos += 7;
 
-    // Prepare table data - ENSURE ALL VALUES ARE STRINGS
+    // Prepare table data with string conversion
     const tableData = currentBarangList.map((item, index) => [
       String(index + 1),
       String(item.kodeBarang || "-"),
@@ -750,7 +760,24 @@ async function generatePDF() {
       String(item.jumlah || 0),
     ]);
 
-    // Add table
+    // Calculate dynamic column widths for full page width
+    const tableWidth = pageWidth - 2 * margin;
+    const colWidths = {
+      no: 15,
+      kode: 30,
+      satuan: 25,
+      jumlah: 20,
+    };
+
+    // Calculate remaining width for nama barang (dynamic)
+    const namaBarangWidth =
+      tableWidth -
+      colWidths.no -
+      colWidths.kode -
+      colWidths.satuan -
+      colWidths.jumlah;
+
+    // Add table with full width
     doc.autoTable({
       startY: yPos,
       head: [["No", "Kode Barang", "Nama Barang", "Satuan", "Jumlah"]],
@@ -761,18 +788,25 @@ async function generatePDF() {
         textColor: 255,
         fontStyle: "bold",
         halign: "center",
-      },
-      bodyStyles: {
         fontSize: 10,
       },
+      bodyStyles: {
+        fontSize: 9,
+        cellPadding: 3,
+      },
       columnStyles: {
-        0: { halign: "center", cellWidth: 15 },
-        1: { halign: "center", cellWidth: 30 },
-        2: { halign: "left", cellWidth: 60 },
-        3: { halign: "center", cellWidth: 25 },
-        4: { halign: "center", cellWidth: 25 },
+        0: { halign: "center", cellWidth: colWidths.no },
+        1: { halign: "center", cellWidth: colWidths.kode },
+        2: { halign: "left", cellWidth: namaBarangWidth }, // Dynamic width
+        3: { halign: "center", cellWidth: colWidths.satuan },
+        4: { halign: "center", cellWidth: colWidths.jumlah },
       },
       margin: { left: margin, right: margin },
+      tableWidth: "auto",
+      styles: {
+        overflow: "linebreak",
+        cellWidth: "wrap",
+      },
     });
 
     yPos = doc.lastAutoTable.finalY + 10;
@@ -795,14 +829,26 @@ async function generatePDF() {
     penerimaData.forEach((row) => {
       doc.text(String(row[0]), margin, yPos);
       doc.text(String(row[1]), margin + 30, yPos);
-      doc.text(String(row[2]), margin + 35, yPos);
-      yPos += 6;
+
+      // Wrap long text if needed
+      const textValue = String(row[2]);
+      if (textValue.length > 60) {
+        const splitText = doc.splitTextToSize(
+          textValue,
+          pageWidth - margin - 40
+        );
+        doc.text(splitText, margin + 35, yPos);
+        yPos += splitText.length * 5;
+      } else {
+        doc.text(textValue, margin + 35, yPos);
+        yPos += 6;
+      }
     });
 
     yPos += 10;
 
     // ===== SIGNATURE SECTION =====
-    const signatureY = pageHeight - 60;
+    const signatureY = pageHeight - 55;
     yPos = Math.max(yPos, signatureY);
 
     // Tanggal cetak
@@ -814,13 +860,13 @@ async function generatePDF() {
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Tangerang Selatan, ${printDate}`, margin, yPos);
+    doc.text(`Palangka Raya, ${printDate}`, margin, yPos);
 
     yPos += 10;
 
-    // Columns for signatures
-    const col1X = margin + 20;
-    const col2X = pageWidth - margin - 50;
+    // Columns for signatures with better spacing
+    const col1X = margin + 25;
+    const col2X = pageWidth - margin - 55;
 
     // Yang Menyerahkan
     doc.setFont("helvetica", "bold");
@@ -829,32 +875,31 @@ async function generatePDF() {
     // Yang Menerima
     doc.text("Yang Menerima,", col2X, yPos);
 
-    yPos += 25;
+    yPos += 20;
 
     // Signature lines
-    doc.line(col1X - 5, yPos, col1X + 45, yPos);
-    doc.line(col2X - 5, yPos, col2X + 45, yPos);
+    doc.setLineWidth(0.5);
+    doc.line(col1X - 5, yPos, col1X + 50, yPos);
+    doc.line(col2X - 5, yPos, col2X + 50, yPos);
 
     yPos += 5;
 
-    // Names under signature - ENSURE STRINGS
+    // Names under signature
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
     doc.text(String(currentTandaTerima.createdBy || "Admin"), col1X, yPos);
     doc.text(String(currentFormData.nama || "-"), col2X, yPos);
 
     // ===== FOOTER =====
-    const footerY = pageHeight - 15;
-    doc.setFontSize(8);
+    const footerY = pageHeight - 10;
+    doc.setFontSize(7);
     doc.setFont("helvetica", "italic");
-    doc.setTextColor(150);
-    doc.text(
-      `Dokumen ini dicetak otomatis oleh SIWARAS UT pada ${new Date().toLocaleString(
-        "id-ID"
-      )}`,
-      pageWidth / 2,
-      footerY,
-      { align: "center" }
-    );
+    doc.setTextColor(120);
+    const footerText = `Dokumen ini dicetak otomatis oleh SIWARAS UT pada ${new Date().toLocaleString(
+      "id-ID"
+    )}`;
+    const footerWidth = doc.getTextWidth(footerText);
+    doc.text(footerText, (pageWidth - footerWidth) / 2, footerY);
 
     // ===== SAVE PDF =====
     const fileName = `TandaTerima_${
@@ -874,6 +919,38 @@ async function generatePDF() {
     alert("Gagal membuat PDF: " + error.message);
   } finally {
     Utils.showLoading(false);
+  }
+}
+
+// Helper function to load logo as base64
+async function loadLogoAsBase64() {
+  try {
+    const logoPath = "../../assets/icon/logo-ut.png";
+
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+
+      img.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL("image/png");
+        resolve(dataURL);
+      };
+
+      img.onerror = function () {
+        console.warn("Could not load logo image");
+        resolve(null);
+      };
+
+      img.src = logoPath;
+    });
+  } catch (error) {
+    console.error("Error loading logo:", error);
+    return null;
   }
 }
 
