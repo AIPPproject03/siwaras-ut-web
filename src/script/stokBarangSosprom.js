@@ -2,12 +2,13 @@ let allData = [];
 let sortAscending = true;
 const DB_TYPE = "sosprom";
 
-// Check authentication
 document.addEventListener("DOMContentLoaded", function () {
   const session = Auth.getSession();
   if (!session.username || session.role !== "admin-sosprom") {
-    alert("Anda harus login sebagai Admin Sosprom!");
-    window.location.href = "../../index.html";
+    toast.error("Anda harus login sebagai Admin Sosprom!", "Akses Ditolak!");
+    setTimeout(() => {
+      window.location.href = "../../index.html";
+    }, 1500);
     return;
   }
 
@@ -26,7 +27,7 @@ async function loadData() {
     renderTable(allData);
   } catch (error) {
     console.error("Error loading data:", error);
-    alert("Gagal memuat data: " + error.message);
+    toast.error("Gagal memuat data: " + error.message, "Error!");
   } finally {
     Utils.showLoading(false);
   }
@@ -112,12 +113,10 @@ function openEditModal(kodeBarang) {
   const item = allData.find((d) => d.kodeBarang === kodeBarang);
   if (!item) return;
 
-  document.getElementById("kodeBarang").value = item.kodeBarang || "";
+  document.getElementById("modal").classList.add("show");
+  document.getElementById("kodeBarang").value = item.kodeBarang;
   document.getElementById("namaBarang").value = item.namaBarang || "";
   document.getElementById("satuan").value = item.satuan || "";
-  document.getElementById("stok").value = item.stok || 0;
-
-  document.getElementById("modal").classList.add("show");
 }
 
 function closeModal() {
@@ -138,31 +137,29 @@ function setupFormSubmit() {
       updatedBy: session.username,
     };
 
-    if (
-      !confirm(
-        `Apakah Anda yakin ingin mengupdate barang ${formData.kodeBarang}?`
-      )
-    ) {
-      return;
-    }
+    toast.confirm(
+      `Apakah Anda yakin ingin mengupdate barang ${formData.kodeBarang}?`,
+      async () => {
+        Utils.showLoading(true);
 
-    Utils.showLoading(true);
+        try {
+          await API.post("updateMasterBarang", formData, DB_TYPE);
+          await Auth.logAudit(
+            "UPDATE_MASTER_BARANG",
+            `Update barang ${formData.kodeBarang}`
+          );
 
-    try {
-      await API.post("updateMasterBarang", formData, DB_TYPE);
-      await Auth.logAudit(
-        "UPDATE_MASTER_BARANG",
-        `Update barang ${formData.kodeBarang}`
-      );
-      alert("Berhasil mengupdate barang!");
-      closeModal();
-      await loadData();
-    } catch (error) {
-      console.error("Error updating data:", error);
-      alert("Gagal mengupdate data: " + error.message);
-    } finally {
-      Utils.showLoading(false);
-    }
+          toast.success("Data barang berhasil diperbarui!", "Berhasil!");
+          closeModal();
+          await loadData();
+        } catch (error) {
+          console.error("Error updating data:", error);
+          toast.error("Gagal mengupdate data: " + error.message, "Error!");
+        } finally {
+          Utils.showLoading(false);
+        }
+      }
+    );
   });
 }
 
@@ -177,34 +174,36 @@ async function deleteBarang(kodeBarang) {
     `Stok: ${item.stok} ${item.satuan}\n\n` +
     `⚠️ PERINGATAN: Data barang akan dihapus permanen!`;
 
-  if (!confirm(confirmMsg)) return;
+  toast.confirm(
+    confirmMsg,
+    async () => {
+      const session = Auth.getSession();
+      Utils.showLoading(true);
 
-  const session = Auth.getSession();
-  Utils.showLoading(true);
+      try {
+        await API.post(
+          "deleteMasterBarang",
+          { kodeBarang: kodeBarang, deletedBy: session.username },
+          DB_TYPE
+        );
+        await Auth.logAudit(
+          "DELETE_MASTER_BARANG",
+          `Hapus barang ${kodeBarang} - ${item.namaBarang}`
+        );
 
-  try {
-    await API.post(
-      "deleteMasterBarang",
-      {
-        kodeBarang: kodeBarang,
-        deletedBy: session.username,
-      },
-      DB_TYPE
-    );
-
-    await Auth.logAudit(
-      "DELETE_MASTER_BARANG",
-      `Hapus barang ${kodeBarang} - ${item.namaBarang}`
-    );
-
-    alert("Berhasil menghapus barang!");
-    await loadData();
-  } catch (error) {
-    console.error("Error deleting data:", error);
-    alert("Gagal menghapus data: " + error.message);
-  } finally {
-    Utils.showLoading(false);
-  }
+        toast.success("Barang berhasil dihapus!", "Berhasil!");
+        await loadData();
+      } catch (error) {
+        console.error("Error deleting data:", error);
+        toast.error("Gagal menghapus data: " + error.message, "Error!");
+      } finally {
+        Utils.showLoading(false);
+      }
+    },
+    () => {
+      toast.info("Penghapusan dibatalkan", "Info");
+    }
+  );
 }
 
 function redirectToBarangMasuk() {
@@ -220,9 +219,17 @@ function closeInfoModal() {
 }
 
 function handleLogout() {
-  if (confirm("Apakah Anda yakin ingin keluar?")) {
-    Auth.logAudit("LOGOUT_ADMIN_SOSPROM", "Admin Sosprom logout");
-    Auth.clearSession();
-    window.location.href = "../../index.html";
-  }
+  toast.confirm("Apakah Anda yakin ingin keluar?", async () => {
+    try {
+      await Auth.logAudit("LOGOUT_ADMIN_SOSPROM", "Admin Sosprom logout");
+      Auth.clearSession();
+      toast.success("Logout berhasil!", "Goodbye!");
+      setTimeout(() => {
+        window.location.href = "../../index.html";
+      }, 1000);
+    } catch (error) {
+      Auth.clearSession();
+      window.location.href = "../../index.html";
+    }
+  });
 }

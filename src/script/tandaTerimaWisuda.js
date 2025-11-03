@@ -16,14 +16,14 @@ let currentFormData = {
 document.addEventListener("DOMContentLoaded", function () {
   const session = Auth.getSession();
   if (!session.username || session.role !== "admin-wisuda") {
-    alert("Anda harus login sebagai Admin Wisuda!");
-    window.location.href = "../../index.html";
+    toast.error("Anda harus login sebagai Admin Wisuda!", "Akses Ditolak!");
+    setTimeout(() => {
+      window.location.href = "../../index.html";
+    }, 1500);
     return;
   }
 
-  // Set tanggal hari ini sebagai default
   document.getElementById("tanggalAdd").valueAsDate = new Date();
-
   loadData();
   loadMasterBarang();
   setupSearch();
@@ -41,7 +41,7 @@ async function loadData() {
     renderTable(allData);
   } catch (error) {
     console.error("Error loading data:", error);
-    alert("Gagal memuat data: " + error.message);
+    toast.error("Gagal memuat data: " + error.message, "Error!");
   } finally {
     Utils.showLoading(false);
   }
@@ -182,19 +182,21 @@ function setupFormSubmit() {
 
     try {
       const result = await API.post("tandaTerima", formData, DB_TYPE);
-
       await Auth.logAudit(
         "CREATE_TANDA_TERIMA",
         `Tambah tanda terima: ${formData.keterangan}`
       );
 
-      alert(`Berhasil membuat tanda terima!\nID: ${result.id_tt}`);
+      toast.success(
+        `Tanda terima berhasil dibuat!\nID: ${result.id_tt}`,
+        "Berhasil!"
+      );
 
       closeAddModal();
       await loadData();
     } catch (error) {
       console.error("Error saving data:", error);
-      alert("Gagal menyimpan data: " + error.message);
+      toast.error("Gagal menyimpan data: " + error.message, "Error!");
     } finally {
       Utils.showLoading(false);
     }
@@ -356,13 +358,12 @@ function updateBarangInfo() {
   const barangInfo = document.getElementById("barangInfo");
 
   if (select.value) {
-    // Check if already added
     const isAlreadyAdded = currentBarangList.some(
       (item) => item.kodeBarang === select.value
     );
 
     if (isAlreadyAdded) {
-      alert("Barang ini sudah ada dalam daftar!");
+      toast.warning("Barang ini sudah ada dalam daftar!", "Peringatan!");
       select.value = "";
       barangInfo.style.display = "none";
       return;
@@ -398,9 +399,11 @@ document
     const jumlah = parseInt(document.getElementById("jumlahBarang").value);
     const stok = parseInt(selectedOption.dataset.stok);
 
-    // Validate jumlah
     if (jumlah > stok) {
-      alert(`Jumlah melebihi stok tersedia!\nStok tersedia: ${stok}`);
+      toast.warning(
+        `Jumlah melebihi stok tersedia!\nStok tersedia: ${stok}`,
+        "Peringatan!"
+      );
       return;
     }
 
@@ -416,19 +419,18 @@ document
 
     try {
       await API.post("tandaTerimaBarang", barangData, DB_TYPE);
-
       await Auth.logAudit(
         "ADD_BARANG_TANDA_TERIMA",
         `Tambah barang ${barangData.kodeBarang} ke tanda terima ${currentTandaTerima.id_tt}`
       );
 
-      alert("Berhasil menambahkan barang ke daftar!");
+      toast.success("Barang berhasil ditambahkan ke daftar!", "Berhasil!");
 
       closeAddBarangModal();
       await loadDetailData(currentTandaTerima.id_tt);
     } catch (error) {
       console.error("Error adding barang:", error);
-      alert("Gagal menambahkan barang: " + error.message);
+      toast.error("Gagal menambahkan barang: " + error.message, "Error!");
     } finally {
       Utils.showLoading(false);
     }
@@ -436,34 +438,32 @@ document
 
 // ==================== DELETE BARANG FROM LIST ====================
 async function deleteBarangFromList(kodeBarang) {
-  if (!confirm(`Apakah Anda yakin ingin menghapus barang ${kodeBarang}?`))
-    return;
+  toast.confirm(
+    `Apakah Anda yakin ingin menghapus barang ${kodeBarang} dari daftar?`,
+    async () => {
+      Utils.showLoading(true);
 
-  Utils.showLoading(true);
+      try {
+        await API.post(
+          "deleteTandaTerimaBarang",
+          { id_tt: currentTandaTerima.id_tt, kodeBarang: kodeBarang },
+          DB_TYPE
+        );
+        await Auth.logAudit(
+          "DELETE_BARANG_TANDA_TERIMA",
+          `Hapus barang ${kodeBarang} dari tanda terima ${currentTandaTerima.id_tt}`
+        );
 
-  try {
-    await API.post(
-      "deleteTandaTerimaBarang",
-      {
-        id_tt: currentTandaTerima.id_tt,
-        kodeBarang: kodeBarang,
-      },
-      DB_TYPE
-    );
-
-    await Auth.logAudit(
-      "DELETE_BARANG_TANDA_TERIMA",
-      `Hapus barang ${kodeBarang} dari tanda terima ${currentTandaTerima.id_tt}`
-    );
-
-    alert("Berhasil menghapus barang dari daftar!");
-    await loadDetailData(currentTandaTerima.id_tt);
-  } catch (error) {
-    console.error("Error deleting barang:", error);
-    alert("Gagal menghapus barang: " + error.message);
-  } finally {
-    Utils.showLoading(false);
-  }
+        toast.success("Barang berhasil dihapus dari daftar!", "Berhasil!");
+        await loadDetailData(currentTandaTerima.id_tt);
+      } catch (error) {
+        console.error("Error deleting barang:", error);
+        toast.error("Gagal menghapus barang: " + error.message, "Error!");
+      } finally {
+        Utils.showLoading(false);
+      }
+    }
+  );
 }
 
 // ==================== EDITABLE TABLE ====================
@@ -541,20 +541,16 @@ async function saveCell(cell, field, newValue) {
   try {
     await API.post(
       "updateTandaTerimaFormData",
-      {
-        id_tt: currentTandaTerima.id_tt,
-        ...currentFormData,
-      },
+      { id_tt: currentTandaTerima.id_tt, ...currentFormData },
       DB_TYPE
     );
-
     await Auth.logAudit(
       "UPDATE_FORM_DATA_TANDA_TERIMA",
       `Update ${field} tanda terima ${currentTandaTerima.id_tt}`
     );
   } catch (error) {
     console.error("Error saving form data:", error);
-    alert("Gagal menyimpan data: " + error.message);
+    toast.error("Gagal menyimpan data: " + error.message, "Error!");
   } finally {
     Utils.showLoading(false);
   }
@@ -562,90 +558,94 @@ async function saveCell(cell, field, newValue) {
 
 // ==================== VALIDATE TANDA TERIMA ====================
 async function validateTandaTerima() {
-  // Check if barang list is not empty
   if (!currentBarangList || currentBarangList.length === 0) {
-    alert("Belum ada barang dalam daftar!\nTambahkan minimal 1 barang.");
+    toast.warning(
+      "Belum ada barang dalam daftar!\nTambahkan minimal 1 barang.",
+      "Peringatan!"
+    );
     return;
   }
 
-  // Check if form data is filled
   if (
     !currentFormData.nama ||
     currentFormData.nama === "-" ||
     !currentFormData.nip ||
     currentFormData.nip === "-"
   ) {
-    alert(
-      "Data penerima belum lengkap!\nPastikan Nama dan NIP/NIM sudah diisi."
+    toast.warning(
+      "Data penerima belum lengkap!\nPastikan Nama dan NIP/NIM sudah diisi.",
+      "Peringatan!"
     );
     return;
   }
 
-  if (
-    !confirm(
-      "Validasi data akan mengubah status menjadi Selesai dan tidak dapat diubah lagi.\n\nLanjutkan?"
-    )
-  )
-    return;
+  toast.confirm(
+    "Validasi data akan mengubah status menjadi Selesai dan tidak dapat diubah lagi.\n\nLanjutkan?",
+    async () => {
+      Utils.showLoading(true);
 
-  Utils.showLoading(true);
+      try {
+        const session = Auth.getSession();
 
-  try {
-    const session = Auth.getSession();
+        // Update status to Selesai
+        await API.post(
+          "updateTandaTerimaStatus",
+          {
+            id_tt: currentTandaTerima.id_tt,
+            status: "Selesai",
+            updatedBy: session.username,
+          },
+          DB_TYPE
+        );
 
-    // Update status to Selesai
-    await API.post(
-      "updateTandaTerimaStatus",
-      {
-        id_tt: currentTandaTerima.id_tt,
-        status: "Selesai",
-        updatedBy: session.username,
-      },
-      DB_TYPE
-    );
+        // Update stok master barang (deduct)
+        for (const barang of currentBarangList) {
+          await API.post(
+            "barangKeluar",
+            {
+              id_tt: currentTandaTerima.id_tt,
+              kodeBarang: barang.kodeBarang,
+              namaBarang: barang.namaBarang,
+              jumlah: barang.jumlah,
+              satuan: barang.satuan,
+              tanggal: currentTandaTerima.tanggal,
+              keterangan: `Barang keluar untuk: ${currentTandaTerima.keterangan}`,
+              createdBy: session.username,
+            },
+            DB_TYPE
+          );
+        }
 
-    // Update stok master barang (deduct)
-    for (const barang of currentBarangList) {
-      await API.post(
-        "barangKeluar",
-        {
-          id_tt: currentTandaTerima.id_tt,
-          kodeBarang: barang.kodeBarang,
-          namaBarang: barang.namaBarang,
-          jumlah: barang.jumlah,
-          satuan: barang.satuan,
-          tanggal: currentTandaTerima.tanggal,
-          keterangan: `Barang keluar untuk: ${currentTandaTerima.keterangan}`,
-          createdBy: session.username,
-        },
-        DB_TYPE
-      );
+        await Auth.logAudit(
+          "VALIDATE_TANDA_TERIMA",
+          `Validasi dan finalisasi tanda terima ${currentTandaTerima.id_tt}`
+        );
+
+        toast.success(
+          "Validasi berhasil!\n\nStatus diubah menjadi Selesai.\nStok barang telah dikurangi.\nSilakan cetak PDF.",
+          "Berhasil!"
+        );
+
+        closeDetailModal();
+        await loadData();
+        await loadMasterBarang();
+      } catch (error) {
+        console.error("Error validating:", error);
+        toast.error("Gagal validasi data: " + error.message, "Error!");
+      } finally {
+        Utils.showLoading(false);
+      }
     }
-
-    await Auth.logAudit(
-      "VALIDATE_TANDA_TERIMA",
-      `Validasi dan finalisasi tanda terima ${currentTandaTerima.id_tt}`
-    );
-
-    alert(
-      "Validasi berhasil!\n\nStatus diubah menjadi Selesai.\nStok barang telah dikurangi.\nSilakan cetak PDF."
-    );
-
-    closeDetailModal();
-    await loadData();
-    await loadMasterBarang();
-  } catch (error) {
-    console.error("Error validating:", error);
-    alert("Gagal validasi data: " + error.message);
-  } finally {
-    Utils.showLoading(false);
-  }
+  );
 }
 
 // ==================== GENERATE PDF ====================
 async function generatePDF() {
   if (currentTandaTerima.status !== "Selesai") {
-    alert("Tanda terima harus divalidasi terlebih dahulu!");
+    toast.warning(
+      "Tanda terima harus divalidasi terlebih dahulu!",
+      "Peringatan!"
+    );
     return;
   }
 
@@ -926,10 +926,10 @@ async function generatePDF() {
       `Generate PDF tanda terima ${currentTandaTerima.id_tt}`
     );
 
-    alert("PDF berhasil dibuat dan diunduh!");
+    toast.success("PDF berhasil dibuat dan diunduh!", "Berhasil!");
   } catch (error) {
     console.error("Error generating PDF:", error);
-    alert("Gagal membuat PDF: " + error.message);
+    toast.error("Gagal membuat PDF: " + error.message, "Error!");
   } finally {
     Utils.showLoading(false);
   }
@@ -972,43 +972,55 @@ async function deleteTandaTerima(id_tt) {
   const item = allData.find((d) => d.id_tt === id_tt);
 
   if (item.status === "Selesai") {
-    alert("Tanda terima yang sudah Selesai tidak dapat dihapus!");
-    return;
-  }
-
-  if (!confirm(`Apakah Anda yakin ingin menghapus tanda terima ${id_tt}?`))
-    return;
-
-  const session = Auth.getSession();
-  Utils.showLoading(true);
-
-  try {
-    await API.post(
-      "deleteTandaTerima",
-      {
-        id_tt: id_tt,
-        deletedBy: session.username,
-      },
-      DB_TYPE
+    toast.warning(
+      "Tanda terima yang sudah Selesai tidak dapat dihapus!",
+      "Peringatan!"
     );
-
-    await Auth.logAudit("DELETE_TANDA_TERIMA", `Hapus tanda terima ${id_tt}`);
-
-    alert("Berhasil menghapus tanda terima!");
-    await loadData();
-  } catch (error) {
-    console.error("Error deleting data:", error);
-    alert("Gagal menghapus data: " + error.message);
-  } finally {
-    Utils.showLoading(false);
+    return;
   }
+
+  toast.confirm(
+    `Apakah Anda yakin ingin menghapus tanda terima ${id_tt}?`,
+    async () => {
+      const session = Auth.getSession();
+      Utils.showLoading(true);
+
+      try {
+        await API.post(
+          "deleteTandaTerima",
+          { id_tt: id_tt, deletedBy: session.username },
+          DB_TYPE
+        );
+        await Auth.logAudit(
+          "DELETE_TANDA_TERIMA",
+          `Hapus tanda terima ${id_tt}`
+        );
+
+        toast.success("Tanda terima berhasil dihapus!", "Berhasil!");
+        await loadData();
+      } catch (error) {
+        console.error("Error deleting data:", error);
+        toast.error("Gagal menghapus data: " + error.message, "Error!");
+      } finally {
+        Utils.showLoading(false);
+      }
+    }
+  );
 }
 
 // ==================== LOGOUT ====================
 function handleLogout() {
-  if (confirm("Apakah Anda yakin ingin keluar?")) {
-    Auth.logAudit("LOGOUT_ADMIN_WISUDA", "Admin Wisuda logout");
-    Auth.clearSession();
-    window.location.href = "../../index.html";
-  }
+  toast.confirm("Apakah Anda yakin ingin keluar?", async () => {
+    try {
+      await Auth.logAudit("LOGOUT_ADMIN_WISUDA", "Admin Wisuda logout");
+      Auth.clearSession();
+      toast.success("Logout berhasil!", "Goodbye!");
+      setTimeout(() => {
+        window.location.href = "../../index.html";
+      }, 1000);
+    } catch (error) {
+      Auth.clearSession();
+      window.location.href = "../../index.html";
+    }
+  });
 }

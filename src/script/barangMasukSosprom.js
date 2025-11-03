@@ -7,14 +7,14 @@ const DB_TYPE = "sosprom";
 document.addEventListener("DOMContentLoaded", function () {
   const session = Auth.getSession();
   if (!session.username || session.role !== "admin-sosprom") {
-    alert("Anda harus login sebagai Admin Sosprom!");
-    window.location.href = "../../index.html";
+    toast.error("Anda harus login sebagai Admin Sosprom!", "Akses Ditolak!");
+    setTimeout(() => {
+      window.location.href = "../../index.html";
+    }, 1500);
     return;
   }
 
-  // Set tanggal hari ini sebagai default
   document.getElementById("tanggal").valueAsDate = new Date();
-
   loadData();
   loadMasterBarang();
   setupSearch();
@@ -31,7 +31,7 @@ async function loadData() {
     renderTable(allData);
   } catch (error) {
     console.error("Error loading data:", error);
-    alert("Gagal memuat data: " + error.message);
+    toast.error("Gagal memuat data: " + error.message, "Error!");
   } finally {
     Utils.showLoading(false);
   }
@@ -74,7 +74,6 @@ function switchInputMode(mode) {
     existingBarangGroup.style.display = "none";
     existingBarangDetails.style.display = "none";
 
-    // Set required on new barang fields
     document.getElementById("kodeBarang").required = true;
     document.getElementById("namaBarang").required = true;
     document.getElementById("satuan").required = true;
@@ -85,7 +84,6 @@ function switchInputMode(mode) {
     newBarangGroup.style.display = "none";
     existingBarangGroup.style.display = "block";
 
-    // Set required on existing barang fields
     document.getElementById("kodeBarang").required = false;
     document.getElementById("namaBarang").required = false;
     document.getElementById("satuan").required = false;
@@ -94,7 +92,6 @@ function switchInputMode(mode) {
     document.getElementById("jumlahExisting").required = true;
   }
 
-  // Clear form
   document.getElementById("existingBarang").value = "";
   fillExistingBarangData();
 }
@@ -107,10 +104,7 @@ function fillExistingBarangData() {
   );
 
   if (select.value) {
-    // Show details
     existingBarangDetails.style.display = "block";
-
-    // Fill display fields
     document.getElementById("displayKodeBarang").textContent = select.value;
     document.getElementById("displayNamaBarang").textContent =
       selectedOption.dataset.namaBarang || "-";
@@ -118,8 +112,6 @@ function fillExistingBarangData() {
       selectedOption.dataset.satuan || "-";
     document.getElementById("displayStok").textContent =
       selectedOption.dataset.stok || "0";
-
-    // Clear jumlah existing
     document.getElementById("jumlahExisting").value = "";
   } else {
     existingBarangDetails.style.display = "none";
@@ -200,6 +192,7 @@ function toggleSort() {
 }
 
 function openAddModal() {
+  document.getElementById("modal").classList.add("show");
   document.getElementById("modalTitle").textContent = "Tambah Barang Masuk";
   document.getElementById("editMode").value = "false";
   document.getElementById("barangMasukForm").reset();
@@ -211,24 +204,25 @@ function openAddModal() {
 
   // Show mode selection only in add mode
   document.getElementById("modeSelectionGroup").style.display = "block";
-
-  document.getElementById("modal").classList.add("show");
 }
 
 function openEditModal(id_bm) {
   const item = allData.find((d) => d.id_bm === id_bm);
   if (!item) return;
 
+  document.getElementById("modal").classList.add("show");
   document.getElementById("modalTitle").textContent = "Edit Barang Masuk";
   document.getElementById("editMode").value = "true";
-  document.getElementById("originalIdBm").value = id_bm;
+  document.getElementById("originalIdBm").value = item.id_bm;
 
   // Hide mode selection in edit mode
   document.getElementById("modeSelectionGroup").style.display = "none";
 
   // Force to new barang mode for editing
+  document.querySelector('input[name="inputMode"][value="new"]').checked = true;
   switchInputMode("new");
 
+  // Fill form
   const tanggalValue = item.tanggal ? item.tanggal.split("T")[0] : "";
   document.getElementById("tanggal").value = tanggalValue;
   document.getElementById("kodeBarang").value = item.kodeBarang || "";
@@ -237,8 +231,8 @@ function openEditModal(id_bm) {
   document.getElementById("satuan").value = item.satuan || "";
   document.getElementById("keterangan").value = item.keterangan || "";
 
+  // Disable kode barang in edit mode
   document.getElementById("kodeBarang").disabled = true;
-  document.getElementById("modal").classList.add("show");
 }
 
 function closeModal() {
@@ -315,30 +309,27 @@ function setupFormSubmit() {
           "UPDATE_BARANG_MASUK",
           `Update barang masuk ${formData.id_bm}`
         );
-        alert("Berhasil mengupdate barang masuk!");
+        toast.success("Data barang masuk berhasil diperbarui!", "Berhasil!");
       } else {
         const result = await API.post("barangMasuk", formData, DB_TYPE);
-
         await Auth.logAudit(
           "CREATE_BARANG_MASUK",
           `Tambah barang masuk ${formData.kodeBarang} (${formData.jumlah} ${formData.satuan})`
         );
 
         const mode = inputMode === "new" ? "baru" : "existing";
-        alert(
-          `Berhasil menambahkan barang masuk!\n` +
-            `ID: ${result.id_bm}\n` +
-            `Mode: ${mode}\n` +
-            `Barang "${formData.namaBarang}" telah ditambahkan ke stok.`
+        toast.success(
+          `Barang masuk berhasil ditambahkan!\nID: ${result.id_bm} | Mode: ${mode}`,
+          "Berhasil!"
         );
       }
 
       closeModal();
       await loadData();
-      await loadMasterBarang(); // Refresh master barang list
+      await loadMasterBarang();
     } catch (error) {
       console.error("Error saving data:", error);
-      alert("Gagal menyimpan data: " + error.message);
+      toast.error("Gagal menyimpan data: " + error.message, "Error!");
     } finally {
       Utils.showLoading(false);
     }
@@ -346,38 +337,47 @@ function setupFormSubmit() {
 }
 
 async function deleteBarangMasuk(id_bm) {
-  if (!confirm(`Apakah Anda yakin ingin menghapus barang masuk ${id_bm}?`))
-    return;
+  toast.confirm(
+    `Apakah Anda yakin ingin menghapus barang masuk ${id_bm}? Tindakan ini tidak dapat dibatalkan.`,
+    async () => {
+      const session = Auth.getSession();
+      Utils.showLoading(true);
 
-  const session = Auth.getSession();
-  Utils.showLoading(true);
+      try {
+        await API.post(
+          "deleteBarangMasuk",
+          { id_bm: id_bm, deletedBy: session.username },
+          DB_TYPE
+        );
+        await Auth.logAudit(
+          "DELETE_BARANG_MASUK",
+          `Hapus barang masuk ${id_bm}`
+        );
 
-  try {
-    await API.post(
-      "deleteBarangMasuk",
-      {
-        id_bm: id_bm,
-        deletedBy: session.username,
-      },
-      DB_TYPE
-    );
-
-    await Auth.logAudit("DELETE_BARANG_MASUK", `Hapus barang masuk ${id_bm}`);
-
-    alert("Berhasil menghapus barang masuk!");
-    await loadData();
-  } catch (error) {
-    console.error("Error deleting data:", error);
-    alert("Gagal menghapus data: " + error.message);
-  } finally {
-    Utils.showLoading(false);
-  }
+        toast.success("Barang masuk berhasil dihapus!", "Berhasil!");
+        await loadData();
+      } catch (error) {
+        console.error("Error deleting data:", error);
+        toast.error("Gagal menghapus data: " + error.message, "Error!");
+      } finally {
+        Utils.showLoading(false);
+      }
+    }
+  );
 }
 
 function handleLogout() {
-  if (confirm("Apakah Anda yakin ingin keluar?")) {
-    Auth.logAudit("LOGOUT_ADMIN_SOSPROM", "Admin Sosprom logout");
-    Auth.clearSession();
-    window.location.href = "../../index.html";
-  }
+  toast.confirm("Apakah Anda yakin ingin keluar dari sistem?", async () => {
+    try {
+      await Auth.logAudit("LOGOUT_ADMIN_SOSPROM", "Admin Sosprom logout");
+      Auth.clearSession();
+      toast.success("Logout berhasil!", "Goodbye!");
+      setTimeout(() => {
+        window.location.href = "../../index.html";
+      }, 1000);
+    } catch (error) {
+      Auth.clearSession();
+      window.location.href = "../../index.html";
+    }
+  });
 }

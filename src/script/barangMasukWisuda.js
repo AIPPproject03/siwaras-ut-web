@@ -7,14 +7,14 @@ const DB_TYPE = "wisuda";
 document.addEventListener("DOMContentLoaded", function () {
   const session = Auth.getSession();
   if (!session.username || session.role !== "admin-wisuda") {
-    alert("Anda harus login sebagai Admin Wisuda!");
-    window.location.href = "../../index.html";
+    toast.error("Anda harus login sebagai Admin Wisuda!", "Akses Ditolak!");
+    setTimeout(() => {
+      window.location.href = "../../index.html";
+    }, 1500);
     return;
   }
 
-  // Set tanggal hari ini sebagai default
   document.getElementById("tanggal").valueAsDate = new Date();
-
   loadData();
   loadMasterBarang();
   setupSearch();
@@ -31,7 +31,7 @@ async function loadData() {
     renderTable(allData);
   } catch (error) {
     console.error("Error loading data:", error);
-    alert("Gagal memuat data: " + error.message);
+    toast.error("Gagal memuat data: " + error.message, "Error!");
   } finally {
     Utils.showLoading(false);
   }
@@ -247,6 +247,36 @@ function closeModal() {
   document.getElementById("kodeBarang").disabled = false;
 }
 
+function updateBarangInfo() {
+  const select = document.getElementById("selectBarang");
+  const selectedOption = select.options[select.selectedIndex];
+  const barangInfo = document.getElementById("barangInfo");
+
+  if (select.value) {
+    const isAlreadyAdded = currentBarangList.some(
+      (item) => item.kodeBarang === select.value
+    );
+
+    if (isAlreadyAdded) {
+      toast.warning("Barang ini sudah ada dalam daftar!", "Peringatan!");
+      select.value = "";
+      barangInfo.style.display = "none";
+      return;
+    }
+
+    barangInfo.style.display = "block";
+    document.getElementById("displayKodeBarang").textContent = select.value;
+    document.getElementById("displayNamaBarang").textContent =
+      selectedOption.dataset.namaBarang || "-";
+    document.getElementById("displaySatuan").textContent =
+      selectedOption.dataset.satuan || "-";
+    document.getElementById("displayStok").textContent =
+      selectedOption.dataset.stok || "0";
+  } else {
+    barangInfo.style.display = "none";
+  }
+}
+
 function setupFormSubmit() {
   const form = document.getElementById("barangMasukForm");
   form.addEventListener("submit", async function (e) {
@@ -315,30 +345,27 @@ function setupFormSubmit() {
           "UPDATE_BARANG_MASUK",
           `Update barang masuk ${formData.id_bm}`
         );
-        alert("Berhasil mengupdate barang masuk!");
+        toast.success("Data barang masuk berhasil diperbarui!", "Berhasil!");
       } else {
         const result = await API.post("barangMasuk", formData, DB_TYPE);
-
         await Auth.logAudit(
           "CREATE_BARANG_MASUK",
           `Tambah barang masuk ${formData.kodeBarang} (${formData.jumlah} ${formData.satuan})`
         );
 
         const mode = inputMode === "new" ? "baru" : "existing";
-        alert(
-          `Berhasil menambahkan barang masuk!\n` +
-            `ID: ${result.id_bm}\n` +
-            `Mode: ${mode}\n` +
-            `Barang "${formData.namaBarang}" telah ditambahkan ke stok.`
+        toast.success(
+          `Barang masuk berhasil ditambahkan!\nID: ${result.id_bm} | Mode: ${mode}`,
+          "Berhasil!"
         );
       }
 
       closeModal();
       await loadData();
-      await loadMasterBarang(); // Refresh master barang list
+      await loadMasterBarang();
     } catch (error) {
       console.error("Error saving data:", error);
-      alert("Gagal menyimpan data: " + error.message);
+      toast.error("Gagal menyimpan data: " + error.message, "Error!");
     } finally {
       Utils.showLoading(false);
     }
@@ -346,38 +373,47 @@ function setupFormSubmit() {
 }
 
 async function deleteBarangMasuk(id_bm) {
-  if (!confirm(`Apakah Anda yakin ingin menghapus barang masuk ${id_bm}?`))
-    return;
+  toast.confirm(
+    `Apakah Anda yakin ingin menghapus barang masuk ${id_bm}? Tindakan ini tidak dapat dibatalkan.`,
+    async () => {
+      const session = Auth.getSession();
+      Utils.showLoading(true);
 
-  const session = Auth.getSession();
-  Utils.showLoading(true);
+      try {
+        await API.post(
+          "deleteBarangMasuk",
+          { id_bm: id_bm, deletedBy: session.username },
+          DB_TYPE
+        );
+        await Auth.logAudit(
+          "DELETE_BARANG_MASUK",
+          `Hapus barang masuk ${id_bm}`
+        );
 
-  try {
-    await API.post(
-      "deleteBarangMasuk",
-      {
-        id_bm: id_bm,
-        deletedBy: session.username,
-      },
-      DB_TYPE
-    );
-
-    await Auth.logAudit("DELETE_BARANG_MASUK", `Hapus barang masuk ${id_bm}`);
-
-    alert("Berhasil menghapus barang masuk!");
-    await loadData();
-  } catch (error) {
-    console.error("Error deleting data:", error);
-    alert("Gagal menghapus data: " + error.message);
-  } finally {
-    Utils.showLoading(false);
-  }
+        toast.success("Barang masuk berhasil dihapus!", "Berhasil!");
+        await loadData();
+      } catch (error) {
+        console.error("Error deleting data:", error);
+        toast.error("Gagal menghapus data: " + error.message, "Error!");
+      } finally {
+        Utils.showLoading(false);
+      }
+    }
+  );
 }
 
 function handleLogout() {
-  if (confirm("Apakah Anda yakin ingin keluar?")) {
-    Auth.logAudit("LOGOUT_ADMIN_WISUDA", "Admin Wisuda logout");
-    Auth.clearSession();
-    window.location.href = "../../index.html";
-  }
+  toast.confirm("Apakah Anda yakin ingin keluar dari sistem?", async () => {
+    try {
+      await Auth.logAudit("LOGOUT_ADMIN_WISUDA", "Admin Wisuda logout");
+      Auth.clearSession();
+      toast.success("Logout berhasil!", "Goodbye!");
+      setTimeout(() => {
+        window.location.href = "../../index.html";
+      }, 1000);
+    } catch (error) {
+      Auth.clearSession();
+      window.location.href = "../../index.html";
+    }
+  });
 }

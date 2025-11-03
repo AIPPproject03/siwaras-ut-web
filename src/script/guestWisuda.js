@@ -47,7 +47,7 @@ async function loadData() {
     renderTable(allData);
   } catch (error) {
     console.error("Error loading data:", error);
-    alert("Gagal memuat data: " + error.message);
+    toast.error("Gagal memuat data: " + error.message, "Error!");
   } finally {
     Utils.showLoading(false);
   }
@@ -107,8 +107,11 @@ function toggleSort() {
 }
 
 function handleLogout() {
-  if (confirm("Apakah Anda yakin ingin keluar?")) {
+  toast.confirm("Apakah Anda yakin ingin keluar?", () => {
     Auth.clearSession();
-    window.location.href = "../index.html";
-  }
+    toast.success("Logout berhasil!", "Goodbye!");
+    setTimeout(() => {
+      window.location.href = "../index.html";
+    }, 1000);
+  });
 }

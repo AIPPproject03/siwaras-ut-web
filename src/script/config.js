@@ -201,9 +201,62 @@ const Utils = {
     });
   },
 
-  showNotification(message, type = "info") {
-    // Simple alert for now - can be replaced with toast library
-    alert(message);
+  // Show notification with toast or fallback to alert
+  showNotification(message, type = "info", title = "") {
+    if (window.toast) {
+      window.toast.show(message, type, title);
+    } else {
+      alert(message);
+    }
+  },
+
+  // Show success notification
+  showSuccess(message, title = "Berhasil!") {
+    if (window.toast) {
+      window.toast.success(message, title);
+    } else {
+      alert(message);
+    }
+  },
+
+  // Show error notification
+  showError(message, title = "Error!") {
+    if (window.toast) {
+      window.toast.error(message, title);
+    } else {
+      alert(message);
+    }
+  },
+
+  // Show warning notification
+  showWarning(message, title = "Peringatan!") {
+    if (window.toast) {
+      window.toast.warning(message, title);
+    } else {
+      alert(message);
+    }
+  },
+
+  // Show info notification
+  showInfo(message, title = "") {
+    if (window.toast) {
+      window.toast.info(message, title);
+    } else {
+      alert(message);
+    }
+  },
+
+  // Confirmation dialog with toast or fallback to confirm
+  confirm(message, onConfirm, onCancel, title = "Konfirmasi") {
+    if (window.toast) {
+      window.toast.confirm(message, onConfirm, onCancel, title);
+    } else {
+      if (confirm(message)) {
+        if (onConfirm) onConfirm();
+      } else {
+        if (onCancel) onCancel();
+      }
+    }
   },
 
   showLoading(show = true) {

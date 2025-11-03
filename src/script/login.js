@@ -1,6 +1,6 @@
 // Determine login type dan mode
 const loginType = window.LOGIN_TYPE || Utils.getUrlParam("type") || "wisuda";
-const loginMode = Utils.getUrlParam("mode") || "admin"; // admin atau guest
+const loginMode = Utils.getUrlParam("mode") || "admin";
 
 console.log("Login Type:", loginType);
 console.log("Login Mode:", loginMode);
@@ -23,36 +23,28 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // Toggle password visibility
-const togglePassword = document.getElementById("togglePassword");
-const passwordInput = document.getElementById("password");
-const eyeIcon = document.getElementById("eyeIcon");
+const togglePasswordBtn = document.getElementById("togglePassword");
+if (togglePasswordBtn) {
+  togglePasswordBtn.addEventListener("click", function () {
+    const passwordInput = document.getElementById("password");
+    const eyeIcon = document.getElementById("eyeIcon");
 
-console.log("Toggle button:", togglePassword);
-console.log("Password input:", passwordInput);
-console.log("Eye icon:", eyeIcon);
-
-if (togglePassword && passwordInput && eyeIcon) {
-  togglePassword.addEventListener("click", function (e) {
-    e.preventDefault();
-    console.log("Toggle password clicked");
-
-    const currentType = passwordInput.getAttribute("type");
-    const newType = currentType === "password" ? "text" : "password";
-    passwordInput.setAttribute("type", newType);
-
-    console.log("Password type changed from", currentType, "to", newType);
-
-    // Toggle icon opacity
-    eyeIcon.style.opacity = newType === "password" ? "0.6" : "1";
+    if (passwordInput.type === "password") {
+      passwordInput.type = "text";
+      eyeIcon.innerHTML = `
+        <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.804 11.804 0 001 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+      `;
+    } else {
+      passwordInput.type = "password";
+      eyeIcon.innerHTML = `
+        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+      `;
+    }
   });
-} else {
-  console.error("Password toggle elements not found!");
 }
 
-// Handle login form submission
+// Handle form submission
 const loginForm = document.getElementById("loginForm");
-console.log("Login form:", loginForm);
-
 if (loginForm) {
   loginForm.addEventListener("submit", async function (e) {
     e.preventDefault();
@@ -65,7 +57,7 @@ if (loginForm) {
     console.log("Password length:", password.length);
 
     if (!username || !password) {
-      alert("Username dan password harus diisi!");
+      toast.warning("Username dan password harus diisi!", "Peringatan!");
       return;
     }
 
@@ -110,8 +102,8 @@ if (loginForm) {
           console.warn("Audit log error (non-critical):", auditError);
         }
 
-        // Show success message
-        alert(`Login berhasil! Selamat datang, ${username}`);
+        // Show success message with toast
+        toast.success(`Selamat datang, ${username}!`, "Login Berhasil!");
 
         // Redirect based on login mode and type
         setTimeout(() => {
@@ -132,7 +124,7 @@ if (loginForm) {
               window.location.href = "guestWisuda.html";
             }
           }
-        }, 500);
+        }, 1500); // Delay to show toast
       } else {
         // Login failed
         console.error("Login failed:", result);
@@ -140,7 +132,10 @@ if (loginForm) {
       }
     } catch (error) {
       console.error("Login error:", error);
-      alert("Login gagal: " + (error.message || "Terjadi kesalahan"));
+      toast.error(
+        error.message || "Terjadi kesalahan saat login",
+        "Login Gagal!"
+      );
 
       // Log failed login attempt
       try {

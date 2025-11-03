@@ -6,8 +6,10 @@ const DB_TYPE = "sosprom"; // Database type untuk Sosprom
 document.addEventListener("DOMContentLoaded", function () {
   const session = Auth.getSession();
   if (!session.username || session.role !== "admin-sosprom") {
-    alert("Anda harus login sebagai Admin Sosprom!");
-    window.location.href = "../../index.html";
+    toast.error("Anda harus login sebagai Admin Sosprom!", "Akses Ditolak!");
+    setTimeout(() => {
+      window.location.href = "../../index.html";
+    }, 1500);
     return;
   }
 
@@ -18,7 +20,6 @@ document.addEventListener("DOMContentLoaded", function () {
 async function loadDashboardData() {
   Utils.showLoading(true);
   try {
-    // Fetch all data from Sosprom database
     const masterBarang = await API.get(
       "readMasterBarang",
       { limit: 1000 },
@@ -39,7 +40,6 @@ async function loadDashboardData() {
     console.log("Barang Masuk:", barangMasuk);
     console.log("Barang Keluar:", barangKeluar);
 
-    // Update stats
     document.getElementById("totalMasuk").textContent =
       barangMasuk.rows?.length || 0;
     document.getElementById("totalKeluar").textContent =
@@ -47,17 +47,12 @@ async function loadDashboardData() {
     document.getElementById("totalBarang").textContent =
       masterBarang.rows?.length || 0;
 
-    // Store data
     allData = masterBarang.rows || [];
-
-    // Render table
     renderTable(allData);
-
-    // Initialize charts (placeholder for now)
     initCharts();
   } catch (error) {
     console.error("Error loading data:", error);
-    alert("Gagal memuat data: " + error.message);
+    toast.error("Gagal memuat data: " + error.message, "Error!");
   } finally {
     Utils.showLoading(false);
   }
@@ -123,9 +118,18 @@ function initCharts() {
 }
 
 function handleLogout() {
-  if (confirm("Apakah Anda yakin ingin keluar?")) {
-    Auth.logAudit("LOGOUT_ADMIN_SOSPROM", "Admin Sosprom logout");
-    Auth.clearSession();
-    window.location.href = "../../index.html";
-  }
+  toast.confirm("Apakah Anda yakin ingin keluar dari sistem?", async () => {
+    try {
+      await Auth.logAudit("LOGOUT_ADMIN_SOSPROM", "Admin Sosprom logout");
+      Auth.clearSession();
+      toast.success("Logout berhasil! Sampai jumpa", "Goodbye!");
+      setTimeout(() => {
+        window.location.href = "../../index.html";
+      }, 1000);
+    } catch (error) {
+      console.error("Logout error:", error);
+      Auth.clearSession();
+      window.location.href = "../../index.html";
+    }
+  });
 }
