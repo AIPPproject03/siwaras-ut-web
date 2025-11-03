@@ -635,7 +635,6 @@ async function generatePDF() {
   try {
     const { jsPDF } = window.jspdf;
 
-    // Additional check
     if (!jsPDF) {
       throw new Error("jsPDF constructor not available");
     }
@@ -651,41 +650,57 @@ async function generatePDF() {
     // ===== LOAD AND ADD LOGO =====
     const logoBase64 = await loadLogoAsBase64();
 
-    // ===== HEADER WITH LOGO =====
-    const logoSize = 20; // Reduced from 25 to 20
-    const logoYPos = yPos + 2; // Adjust vertical position
+    // ===== HEADER WITH LOGO (Landscape orientation) =====
+    const logoWidth = 25; // Width lebih panjang
+    const logoHeight = 18; // Height lebih pendek (landscape ratio)
+    const logoYPos = yPos;
 
     if (logoBase64) {
-      // Add logo on the left with consistent aspect ratio
-      doc.addImage(logoBase64, "PNG", margin, logoYPos, logoSize, logoSize);
+      // Add logo on the left with landscape aspect ratio
+      doc.addImage(logoBase64, "PNG", margin, logoYPos, logoWidth, logoHeight);
     }
 
-    // ===== HEADER TEXT (beside logo) =====
-    const headerStartX = margin + logoSize + 5; // Space after logo
-    const headerStartY = yPos + 3;
+    // ===== HEADER TEXT (beside logo, vertically centered) =====
+    const headerStartX = margin + logoWidth + 6; // Space after logo
+    const logoCenter = logoYPos + logoHeight / 2; // Center of logo vertically
 
+    // Calculate text positions to center with logo
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("UNIVERSITAS TERBUKA", headerStartX, headerStartY);
+    const line1Height = 16 * 0.352778; // Convert pt to mm
+    const line2Height = 10 * 0.352778;
+    const line3Height = 9 * 0.352778;
+    const totalTextHeight = line1Height + line2Height + line3Height + 2 + 2; // +2 for spacing
+    const textStartY = logoCenter - totalTextHeight / 2 + line1Height / 2;
+
+    doc.text("UNIVERSITAS TERBUKA", headerStartX, textStartY);
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text("UPBJJ-UT PALANGKA RAYA", headerStartX, headerStartY + 6);
+    doc.text(
+      "UPBJJ-UT PALANGKA RAYA",
+      headerStartX,
+      textStartY + line1Height + 2
+    );
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     doc.text(
       "Sistem Inventori Wisuda & Rangkaian Sosprom (SIWARAS)",
       headerStartX,
-      headerStartY + 11
+      textStartY + line1Height + line2Height + 4
     );
 
     // Move yPos past the header section
-    yPos = Math.max(logoYPos + logoSize, headerStartY + 11) + 5;
+    yPos =
+      Math.max(
+        logoYPos + logoHeight,
+        textStartY + line1Height + line2Height + line3Height + 4
+      ) + 3;
 
     // Line separator
     doc.setLineWidth(0.8);
-    doc.setDrawColor(41, 128, 185); // Blue color
+    doc.setDrawColor(41, 128, 185);
     doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 10;
 
@@ -715,7 +730,6 @@ async function generatePDF() {
       doc.text(String(row[0]), margin, yPos);
       doc.text(String(row[1]), margin + 40, yPos);
 
-      // Wrap long text if needed
       const textValue = String(row[2]);
       if (textValue.length > 50) {
         const splitText = doc.splitTextToSize(
@@ -738,7 +752,6 @@ async function generatePDF() {
     doc.text("Daftar Barang:", margin, yPos);
     yPos += 7;
 
-    // Prepare table data with string conversion
     const tableData = currentBarangList.map((item, index) => [
       String(index + 1),
       String(item.kodeBarang || "-"),
@@ -747,7 +760,6 @@ async function generatePDF() {
       String(item.jumlah || 0),
     ]);
 
-    // Calculate dynamic column widths for full page width
     const tableWidth = pageWidth - 2 * margin;
     const colWidths = {
       no: 15,
@@ -756,7 +768,6 @@ async function generatePDF() {
       jumlah: 20,
     };
 
-    // Calculate remaining width for nama barang (dynamic)
     const namaBarangWidth =
       tableWidth -
       colWidths.no -
@@ -764,7 +775,6 @@ async function generatePDF() {
       colWidths.satuan -
       colWidths.jumlah;
 
-    // Add table with full width
     doc.autoTable({
       startY: yPos,
       head: [["No", "Kode Barang", "Nama Barang", "Satuan", "Jumlah"]],
@@ -784,7 +794,7 @@ async function generatePDF() {
       columnStyles: {
         0: { halign: "center", cellWidth: colWidths.no },
         1: { halign: "center", cellWidth: colWidths.kode },
-        2: { halign: "left", cellWidth: namaBarangWidth }, // Dynamic width
+        2: { halign: "left", cellWidth: namaBarangWidth },
         3: { halign: "center", cellWidth: colWidths.satuan },
         4: { halign: "center", cellWidth: colWidths.jumlah },
       },
@@ -817,7 +827,6 @@ async function generatePDF() {
       doc.text(String(row[0]), margin, yPos);
       doc.text(String(row[1]), margin + 30, yPos);
 
-      // Wrap long text if needed
       const textValue = String(row[2]);
       if (textValue.length > 60) {
         const splitText = doc.splitTextToSize(
@@ -838,7 +847,6 @@ async function generatePDF() {
     const signatureY = pageHeight - 55;
     yPos = Math.max(yPos, signatureY);
 
-    // Tanggal cetak
     const printDate = new Date().toLocaleDateString("id-ID", {
       day: "numeric",
       month: "long",
@@ -851,27 +859,21 @@ async function generatePDF() {
 
     yPos += 10;
 
-    // Columns for signatures with better spacing
     const col1X = margin + 25;
     const col2X = pageWidth - margin - 55;
 
-    // Yang Menyerahkan
     doc.setFont("helvetica", "bold");
     doc.text("Yang Menyerahkan,", col1X, yPos);
-
-    // Yang Menerima
     doc.text("Yang Menerima,", col2X, yPos);
 
     yPos += 20;
 
-    // Signature lines
     doc.setLineWidth(0.5);
     doc.line(col1X - 5, yPos, col1X + 50, yPos);
     doc.line(col2X - 5, yPos, col2X + 50, yPos);
 
     yPos += 5;
 
-    // Names under signature
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.text(String(currentTandaTerima.createdBy || "Admin"), col1X, yPos);
@@ -894,7 +896,6 @@ async function generatePDF() {
     }_${Date.now()}.pdf`;
     doc.save(fileName);
 
-    // Log audit
     await Auth.logAudit(
       "GENERATE_PDF_TANDA_TERIMA",
       `Generate PDF tanda terima ${currentTandaTerima.id_tt}`

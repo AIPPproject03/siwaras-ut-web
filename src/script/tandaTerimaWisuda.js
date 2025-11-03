@@ -649,7 +649,6 @@ async function generatePDF() {
     return;
   }
 
-  // Check if jsPDF is loaded
   if (typeof window.jspdf === "undefined") {
     alert("Library PDF belum ter-load. Silakan refresh halaman dan coba lagi.");
     console.error("jsPDF library not loaded");
@@ -661,14 +660,12 @@ async function generatePDF() {
   try {
     const { jsPDF } = window.jspdf;
 
-    // Additional check
     if (!jsPDF) {
       throw new Error("jsPDF constructor not available");
     }
 
     const doc = new jsPDF();
 
-    // Configuration
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 20;
@@ -677,41 +674,53 @@ async function generatePDF() {
     // ===== LOAD AND ADD LOGO =====
     const logoBase64 = await loadLogoAsBase64();
 
-    // ===== HEADER WITH LOGO =====
-    const logoSize = 20; // Reduced from 25 to 20
-    const logoYPos = yPos + 2; // Adjust vertical position
+    // ===== HEADER WITH LOGO (Landscape orientation) =====
+    const logoWidth = 25; // Width lebih panjang
+    const logoHeight = 18; // Height lebih pendek (landscape ratio)
+    const logoYPos = yPos;
 
     if (logoBase64) {
-      // Add logo on the left with consistent aspect ratio
-      doc.addImage(logoBase64, "PNG", margin, logoYPos, logoSize, logoSize);
+      doc.addImage(logoBase64, "PNG", margin, logoYPos, logoWidth, logoHeight);
     }
 
-    // ===== HEADER TEXT (beside logo) =====
-    const headerStartX = margin + logoSize + 5; // Space after logo
-    const headerStartY = yPos + 3;
+    // ===== HEADER TEXT (beside logo, vertically centered) =====
+    const headerStartX = margin + logoWidth + 6;
+    const logoCenter = logoYPos + logoHeight / 2;
 
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("UNIVERSITAS TERBUKA", headerStartX, headerStartY);
+    const line1Height = 16 * 0.352778;
+    const line2Height = 10 * 0.352778;
+    const line3Height = 9 * 0.352778;
+    const totalTextHeight = line1Height + line2Height + line3Height + 2 + 2;
+    const textStartY = logoCenter - totalTextHeight / 2 + line1Height / 2;
+
+    doc.text("UNIVERSITAS TERBUKA", headerStartX, textStartY);
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text("UPBJJ-UT PALANGKA RAYA", headerStartX, headerStartY + 6);
+    doc.text(
+      "UPBJJ-UT PALANGKA RAYA",
+      headerStartX,
+      textStartY + line1Height + 2
+    );
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     doc.text(
       "Sistem Inventori Wisuda & Rangkaian Sosprom (SIWARAS)",
       headerStartX,
-      headerStartY + 11
+      textStartY + line1Height + line2Height + 4
     );
 
-    // Move yPos past the header section
-    yPos = Math.max(logoYPos + logoSize, headerStartY + 11) + 5;
+    yPos =
+      Math.max(
+        logoYPos + logoHeight,
+        textStartY + line1Height + line2Height + line3Height + 4
+      ) + 3;
 
-    // Line separator
     doc.setLineWidth(0.8);
-    doc.setDrawColor(41, 128, 185); // Blue color
+    doc.setDrawColor(41, 128, 185);
     doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 10;
 
