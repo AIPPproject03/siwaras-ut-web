@@ -261,42 +261,79 @@
   display: flex;
   gap: 8px;
   justify-content: center;
+  align-items: center;
 }
 
-.action-btns button {
-  padding: 8px 12px;
-  border-radius: 6px;
+.action-btns .btn-edit,
+.action-btns .btn-delete,
+.action-btns .btn-print {
+  padding: 10px;
   border: none;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
 }
 
-.action-btns button svg {
-  width: 18px;
-  height: 18px;
-}
-
-.btn-edit {
-  background: linear-gradient(135deg, var(--primary) 0%, #0369a1 100%);
+.action-btns .btn-edit {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
   color: white;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
 }
 
-.btn-edit:hover {
+.action-btns .btn-edit:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
 }
 
-.btn-delete {
+.action-btns .btn-edit svg {
+  width: 22px;
+  height: 22px;
+}
+
+.action-btns .btn-delete {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
 }
 
-.btn-delete:hover:not([disabled]) {
+.action-btns .btn-delete:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.action-btns .btn-delete svg {
+  width: 22px;
+  height: 22px;
+}
+
+.action-btns .btn-print {
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(148, 163, 184, 0.3);
+}
+
+.action-btns .btn-print:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(148, 163, 184, 0.4);
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+}
+
+.action-btns .btn-print svg {
+  width: 22px;
+  height: 22px;
+}
+
+.action-btns .btn-edit:active,
+.action-btns .btn-delete:active,
+.action-btns .btn-print:active {
+  transform: translateY(0);
 }
 
 /* Animation for status change */
