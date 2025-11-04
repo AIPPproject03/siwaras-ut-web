@@ -224,13 +224,11 @@ body {
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 3px solid #fbbf24;
-  min-height: 280px;
+  height: 350px; /* Fixed height for consistency */
 }
 
 .chart-card canvas {
-  width: 100% !important;
-  height: 250px !important;
+  max-height: 100%;
 }
 
 /* ========== Table Section ========== */
