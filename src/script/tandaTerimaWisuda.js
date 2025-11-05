@@ -738,7 +738,7 @@ async function generatePDFWithData(tandaTerima, barangList, formData) {
   // ===== LOAD AND ADD LOGO =====
   const logoBase64 = await loadLogoAsBase64();
 
-  // ===== HEADER WITH LOGO (Landscape orientation) =====
+  // ===== HEADER WITH LOGO =====
   const logoWidth = 25;
   const logoHeight = 18;
   const logoYPos = yPos;
@@ -751,38 +751,40 @@ async function generatePDFWithData(tandaTerima, barangList, formData) {
   const headerStartX = margin + logoWidth + 6;
   const logoCenter = logoYPos + logoHeight / 2;
 
-  doc.setFontSize(16);
+  // Calculate heights for vertical centering
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  const line1Height = 16 * 0.352778;
-  const line2Height = 10 * 0.352778;
-  const line3Height = 9 * 0.352778;
-  const totalTextHeight = line1Height + line2Height + line3Height + 2 + 2;
+  const line1Height = 14 * 0.352778; // Convert pt to mm
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "italic");
+  const line2Height = 9 * 0.352778;
+
+  const totalTextHeight = line1Height + line2Height + 3; // 3mm spacing
   const textStartY = logoCenter - totalTextHeight / 2 + line1Height / 2;
 
-  doc.text("UNIVERSITAS TERBUKA", headerStartX, textStartY);
+  // Line 1: UNIVERSITAS TERBUKA PALANGKA RAYA
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("UNIVERSITAS TERBUKA PALANGKA RAYA", headerStartX, textStartY);
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(
-    "UPBJJ-UT PALANGKA RAYA",
-    headerStartX,
-    textStartY + line1Height + 2
-  );
-
+  // Line 2: Sistem Inventori
   doc.setFontSize(9);
   doc.setFont("helvetica", "italic");
   doc.text(
     "Sistem Inventori Wisuda & Rangkaian Sosprom (SIWARAS)",
     headerStartX,
-    textStartY + line1Height + line2Height + 4
+    textStartY + line1Height + 3
   );
 
+  // Update yPos after header
   yPos =
     Math.max(
       logoYPos + logoHeight,
-      textStartY + line1Height + line2Height + line3Height + 4
+      textStartY + line1Height + line2Height + 3
     ) + 3;
 
+  // ===== HORIZONTAL LINE =====
   doc.setLineWidth(0.8);
   doc.setDrawColor(41, 128, 185);
   doc.line(margin, yPos, pageWidth - margin, yPos);

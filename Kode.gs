@@ -10,10 +10,19 @@ const SHEETS = {
   mBarang: "masterBarang",
   bMasuk: "barangMasuk",
   bKeluar: "barangKeluar",
-  // Tambahan untuk Tanda Terima
   tandaTerima: "tandaTerima",
   ttBarang: "tandaTerimaBarang",
   ttFormData: "tandaTerimaFormData",
+};
+
+// Kolom yang harus di-format sebagai text
+const TEXT_COLUMNS = {
+  masterBarang: ["kodeBarang"],
+  barangMasuk: ["kodeBarang", "id_bm"],
+  barangKeluar: ["kodeBarang", "id_bk"],
+  tandaTerima: ["id_tt"],
+  tandaTerimaBarang: ["kodeBarang", "id_tt"],
+  tandaTerimaFormData: ["id_tt", "nip"],
 };
 
 function _(name) {
@@ -23,7 +32,6 @@ function _(name) {
 }
 
 function nowISO() {
-  // ISO tanpa milidetik, dengan offset +07:00
   return Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd'T'HH:mm:ssXXX");
 }
 
@@ -84,7 +92,7 @@ function nextDailyId(sheet, headerName, prefix) {
 
   let maxN = 0;
   for (let i = 0; i < values.length; i++) {
-    const v = String(values[i][0] || "");
+    const v = String(values[i][0] || "").trim();
     if (v.startsWith(base + "-")) {
       const parts = v.split("-");
       const n = parseInt(parts[parts.length - 1], 10);
@@ -94,18 +102,35 @@ function nextDailyId(sheet, headerName, prefix) {
   return `${base}-${maxN + 1}`;
 }
 
+// ENHANCED: appendByObject dengan force text format
 function appendByObject(sheetName, obj) {
   const sheet = _(sheetName);
   const { headers, map } = getHeaderIndexMap(sheet);
   const row = new Array(headers.length).fill("");
+
   Object.keys(obj).forEach((k) => {
-    if (map.hasOwnProperty(k)) row[map[k]] = obj[k];
+    if (map.hasOwnProperty(k)) {
+      row[map[k]] = obj[k];
+    }
   });
+
   sheet.appendRow(row);
+
+  // Force text format untuk kolom tertentu
+  const lastRow = sheet.getLastRow();
+  const textColumns = TEXT_COLUMNS[sheetName] || [];
+
+  textColumns.forEach((colName) => {
+    const colIdx = map[colName];
+    if (colIdx != null && obj[colName] != null) {
+      const range = sheet.getRange(lastRow, colIdx + 1);
+      range.setNumberFormat("@"); // @ = plain text format
+    }
+  });
+
   return row;
 }
 
-// Cari nomor baris (1-based) berdasarkan nilai di kolom header tertentu.
 function findRowByKey(sheetName, headerName, keyValue) {
   const sheet = _(sheetName);
   const { headers, map } = getHeaderIndexMap(sheet);
@@ -116,26 +141,96 @@ function findRowByKey(sheetName, headerName, keyValue) {
   if (last <= 1) return -1;
 
   const col = colIdx0 + 1; // 1-based
-  const values = sheet.getRange(2, col, last - 1, 1).getValues(); // dari baris 2
+  const values = sheet.getRange(2, col, last - 1, 1).getValues();
+
+  // Normalize comparison - trim and convert to string
+  const normalizedKey = String(keyValue).trim();
+
   for (let i = 0; i < values.length; i++) {
-    if (String(values[i][0]) === String(keyValue)) {
+    const cellValue = String(values[i][0]).trim();
+    if (cellValue === normalizedKey) {
       return i + 2; // offset header
     }
   }
   return -1;
 }
 
-// Update sebagian kolom pada baris tertentu (hanya field yang disediakan di obj).
 function updateRowByObject(sheetName, row, obj) {
   const sheet = _(sheetName);
   const { headers, map } = getHeaderIndexMap(sheet);
   const rowVals = sheet.getRange(row, 1, 1, headers.length).getValues()[0];
+
   Object.keys(obj).forEach((k) => {
     if (map.hasOwnProperty(k)) {
       rowVals[map[k]] = obj[k];
     }
   });
+
   sheet.getRange(row, 1, 1, headers.length).setValues([rowVals]);
+
+  // Force text format untuk kolom tertentu
+  const textColumns = TEXT_COLUMNS[sheetName] || [];
+  textColumns.forEach((colName) => {
+    const colIdx = map[colName];
+    if (colIdx != null && obj[colName] != null) {
+      const range = sheet.getRange(row, colIdx + 1);
+      range.setNumberFormat("@");
+    }
+  });
+}
+
+/** =======================
+ *  ONE-TIME SETUP FUNCTION
+ *  ======================= */
+// Run this ONCE to format all existing data as text
+function setupTextFormatAllSheets() {
+  const results = [];
+
+  Object.keys(TEXT_COLUMNS).forEach((sheetName) => {
+    try {
+      const sheet = _(SHEETS[sheetName] || sheetName);
+      const headers = sheet
+        .getRange(1, 1, 1, sheet.getLastColumn())
+        .getValues()[0];
+      const lastRow = sheet.getLastRow();
+
+      if (lastRow <= 1) {
+        results.push(`${sheetName}: No data to format`);
+        return;
+      }
+
+      const columnsToFormat = TEXT_COLUMNS[sheetName];
+
+      columnsToFormat.forEach((colName) => {
+        const colIdx = headers.indexOf(colName);
+        if (colIdx !== -1) {
+          // Format entire column as text (including existing data)
+          const range = sheet.getRange(2, colIdx + 1, lastRow - 1, 1);
+          range.setNumberFormat("@");
+
+          // Get values and re-set them to ensure text format
+          const values = range.getValues();
+          const textValues = values.map((row) => [String(row[0]).trim()]);
+          range.setValues(textValues);
+
+          results.push(
+            `${sheetName}.${colName}: Formatted ${lastRow - 1} rows`
+          );
+        }
+      });
+    } catch (error) {
+      results.push(`${sheetName}: ERROR - ${error.message}`);
+    }
+  });
+
+  Logger.log("=== TEXT FORMAT SETUP COMPLETE ===");
+  results.forEach((r) => Logger.log(r));
+
+  return {
+    ok: true,
+    message: "Text formatting applied",
+    details: results,
+  };
 }
 
 /** =======================
@@ -330,9 +425,21 @@ function readAll(sheetName, limit = 1000) {
 
   const rows = values.map((v) => {
     const obj = {};
-    headers.forEach((h, i) => (obj[String(h)] = v[i]));
+    headers.forEach((h, i) => {
+      let value = v[i];
+      // Ensure text columns are returned as trimmed strings
+      const headerName = String(h).trim();
+      if (
+        TEXT_COLUMNS[sheetName] &&
+        TEXT_COLUMNS[sheetName].includes(headerName)
+      ) {
+        value = String(value).trim();
+      }
+      obj[headerName] = value;
+    });
     return obj;
   });
+
   return { rows };
 }
 
@@ -349,6 +456,10 @@ function addMasterBarang({
   updatedBy = "",
 }) {
   const createdAt = nowISO();
+
+  // Normalize kodeBarang to uppercase and trim
+  kodeBarang = String(kodeBarang).trim().toUpperCase();
+
   appendByObject(SHEETS.mBarang, {
     kodeBarang,
     namaBarang,
@@ -358,6 +469,7 @@ function addMasterBarang({
     createdBy,
     updatedBy,
   });
+
   logAudit({
     username: createdBy,
     action: "CREATE_MASTER_BARANG",
@@ -369,33 +481,46 @@ function addMasterBarang({
 function updateMasterBarang(data) {
   const { kodeBarang, ...rest } = data || {};
   if (!kodeBarang) throw new Error("kodeBarang wajib diisi untuk update");
-  const row = findRowByKey(SHEETS.mBarang, "kodeBarang", kodeBarang);
+
+  const normalizedKode = String(kodeBarang).trim().toUpperCase();
+  const row = findRowByKey(SHEETS.mBarang, "kodeBarang", normalizedKode);
+
   if (row === -1)
-    throw new Error(`masterBarang dengan kode ${kodeBarang} tidak ditemukan`);
-  // sentuh updatedBy & timestamp
+    throw new Error(
+      `masterBarang dengan kode ${normalizedKode} tidak ditemukan`
+    );
+
   rest.updatedBy = rest.updatedBy || rest.createdBy || "";
   rest.updatedAt = nowISO();
   updateRowByObject(SHEETS.mBarang, row, rest);
+
   logAudit({
     username: rest.updatedBy || "",
     action: "UPDATE_MASTER_BARANG",
-    details: `Ubah ${kodeBarang}`,
+    details: `Ubah ${normalizedKode}`,
   });
-  return { ok: true, kodeBarang, row };
+  return { ok: true, kodeBarang: normalizedKode, row };
 }
 // DELETE masterBarang by kodeBarang
 function deleteMasterBarang({ kodeBarang, deletedBy = "" }) {
   if (!kodeBarang) throw new Error("kodeBarang wajib diisi untuk delete");
-  const row = findRowByKey(SHEETS.mBarang, "kodeBarang", kodeBarang);
+
+  const normalizedKode = String(kodeBarang).trim().toUpperCase();
+  const row = findRowByKey(SHEETS.mBarang, "kodeBarang", normalizedKode);
+
   if (row === -1)
-    throw new Error(`masterBarang dengan kode ${kodeBarang} tidak ditemukan`);
+    throw new Error(
+      `masterBarang dengan kode ${normalizedKode} tidak ditemukan`
+    );
+
   _(SHEETS.mBarang).deleteRow(row);
+
   logAudit({
     username: deletedBy,
     action: "DELETE_MASTER_BARANG",
-    details: `Hapus ${kodeBarang}`,
+    details: `Hapus ${normalizedKode}`,
   });
-  return { ok: true, kodeBarang, deleted: true };
+  return { ok: true, kodeBarang: normalizedKode, deleted: true };
 }
 
 // ==== Master Barang ====
@@ -421,7 +546,9 @@ function addBarangMasuk({
   const id_bm = nextDailyId(sheet, "id_bm", "bm");
   const createdAt = nowISO();
 
-  // Tambahkan ke sheet barangMasuk
+  // Normalize kodeBarang
+  kodeBarang = String(kodeBarang).trim().toUpperCase();
+
   appendByObject(SHEETS.bMasuk, {
     id_bm,
     tanggal,
@@ -434,11 +561,9 @@ function addBarangMasuk({
     createdBy,
   });
 
-  // Cek apakah barang sudah ada di masterBarang
   const existingRow = findRowByKey(SHEETS.mBarang, "kodeBarang", kodeBarang);
 
   if (existingRow === -1) {
-    // Barang belum ada, tambahkan ke masterBarang dengan stok awal = jumlah
     appendByObject(SHEETS.mBarang, {
       kodeBarang,
       namaBarang,
@@ -455,7 +580,6 @@ function addBarangMasuk({
       details: `Auto-create masterBarang ${kodeBarang} dari barang masuk ${id_bm}`,
     });
   } else {
-    // Barang sudah ada, update stok dengan menambahkan jumlah
     const sheetMaster = _(SHEETS.mBarang);
     const { headers, map } = getHeaderIndexMap(sheetMaster);
     const stokColIdx = map["stok"];
@@ -467,7 +591,6 @@ function addBarangMasuk({
 
       sheetMaster.getRange(existingRow, stokColIdx + 1).setValue(newStok);
 
-      // Update updatedBy dan updatedAt
       const updatedByIdx = map["updatedBy"];
       const updatedAtIdx = map["updatedAt"];
       if (updatedByIdx != null) {

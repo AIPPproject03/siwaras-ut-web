@@ -24,12 +24,10 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   document.getElementById("tanggalAdd").valueAsDate = new Date();
-
   loadData();
   loadMasterBarang();
   setupSearch();
-  setupAddFormSubmit();
-  setupAddBarangFormSubmit();
+  setupFormSubmit();
 });
 
 // ==================== LOAD DATA ====================
@@ -37,6 +35,8 @@ async function loadData() {
   Utils.showLoading(true);
   try {
     const result = await API.get("readTandaTerima", { limit: 1000 }, DB_TYPE);
+    console.log("Tanda Terima:", result);
+
     allData = result.rows || [];
     renderTable(allData);
   } catch (error) {
@@ -63,17 +63,18 @@ function populateBarangDropdown() {
 
   select.innerHTML = '<option value="">-- Pilih Barang --</option>';
 
-  masterBarangData
-    .filter((item) => parseInt(item.stok) > 0)
-    .forEach((item) => {
-      const option = document.createElement("option");
-      option.value = item.kodeBarang;
-      option.textContent = `${item.kodeBarang} - ${item.namaBarang} (Stok: ${item.stok} ${item.satuan})`;
-      option.dataset.namaBarang = item.namaBarang;
-      option.dataset.satuan = item.satuan;
-      option.dataset.stok = item.stok;
-      select.appendChild(option);
-    });
+  // Only show available items (stok > 0)
+  const availableBarang = masterBarangData.filter((item) => item.stok > 0);
+
+  availableBarang.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.kodeBarang;
+    option.textContent = `${item.kodeBarang} - ${item.namaBarang} (Stok: ${item.stok} ${item.satuan})`;
+    option.dataset.namaBarang = item.namaBarang;
+    option.dataset.satuan = item.satuan;
+    option.dataset.stok = item.stok;
+    select.appendChild(option);
+  });
 }
 
 // ==================== RENDER TABLE ====================
@@ -101,7 +102,7 @@ function renderTable(data) {
       <td>${Utils.formatDate(item.tanggal) || "-"}</td>
       <td>
         <span class="status-badge status-${
-          item.status?.toLowerCase() || "draft"
+          item.status === "Selesai" ? "selesai" : "draft"
         }">
           ${item.status || "Draft"}
         </span>
@@ -166,16 +167,17 @@ function toggleSort() {
 
 // ==================== MODAL ADD TANDA TERIMA ====================
 function openAddModal() {
-  document.getElementById("addTandaTerimaForm").reset();
   document.getElementById("tanggalAdd").valueAsDate = new Date();
+  document.getElementById("keteranganAdd").value = "";
   document.getElementById("modalAdd").classList.add("show");
 }
 
 function closeAddModal() {
   document.getElementById("modalAdd").classList.remove("show");
+  document.getElementById("addTandaTerimaForm").reset();
 }
 
-function setupAddFormSubmit() {
+function setupFormSubmit() {
   const form = document.getElementById("addTandaTerimaForm");
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
@@ -184,6 +186,7 @@ function setupAddFormSubmit() {
     const formData = {
       tanggal: document.getElementById("tanggalAdd").value,
       keterangan: document.getElementById("keteranganAdd").value.trim(),
+      status: "Draft",
       createdBy: session.username,
     };
 
@@ -193,7 +196,7 @@ function setupAddFormSubmit() {
       const result = await API.post("tandaTerima", formData, DB_TYPE);
       await Auth.logAudit(
         "CREATE_TANDA_TERIMA",
-        `Buat tanda terima ${result.id_tt} - ${formData.keterangan}`
+        `Tambah tanda terima: ${formData.keterangan}`
       );
 
       toast.success(
@@ -214,53 +217,65 @@ function setupAddFormSubmit() {
 
 // ==================== MODAL DETAIL ====================
 async function openDetailModal(id_tt) {
-  currentTandaTerima = allData.find((item) => item.id_tt === id_tt);
-  if (!currentTandaTerima) return;
+  const item = allData.find((d) => d.id_tt === id_tt);
+  if (!item) return;
 
-  document.getElementById("detailTitle").textContent = `Detail ${id_tt}`;
-  document.getElementById("detailKeterangan").textContent =
-    currentTandaTerima.keterangan || "-";
+  currentTandaTerima = item;
+
+  // Set header info
+  document.getElementById(
+    "detailTitle"
+  ).textContent = `Detail Tanda Terima - ${id_tt}`;
+  document.getElementById("detailKeterangan").textContent = item.keterangan;
   document.getElementById("detailTanggal").textContent = Utils.formatDate(
-    currentTandaTerima.tanggal
+    item.tanggal
   );
-  document.getElementById("detailStatus").textContent =
-    currentTandaTerima.status || "Draft";
+  document.getElementById("detailStatus").innerHTML = `
+    <span class="status-badge status-${
+      item.status === "Selesai" ? "selesai" : "draft"
+    }">
+      ${item.status}
+    </span>
+  `;
+
+  // Load detail data
+  await loadDetailData(id_tt);
 
   // Show/hide buttons based on status
-  const isDraft = currentTandaTerima.status === "Draft";
-  document.getElementById("btnAddBarang").style.display = isDraft
-    ? "flex"
-    : "none";
-  document.getElementById("btnValidate").style.display = isDraft
-    ? "flex"
-    : "none";
-  document.getElementById("btnPDF").style.display = isDraft ? "none" : "flex";
+  const isSelesai = item.status === "Selesai";
+  document.getElementById("btnAddBarang").style.display = isSelesai
+    ? "none"
+    : "flex";
+  document.getElementById("btnValidate").style.display = isSelesai
+    ? "none"
+    : "flex";
+  document.getElementById("btnPDF").style.display = isSelesai ? "flex" : "none";
 
-  // Disable editing if not draft
+  // Disable editing if Selesai
   const editableCells = document.querySelectorAll(".editable");
   editableCells.forEach((cell) => {
-    if (isDraft) {
-      cell.style.cursor = "pointer";
+    if (isSelesai) {
+      cell.ondblclick = null;
+      cell.style.cursor = "default";
+    } else {
       cell.ondblclick = function () {
         editCell(this);
       };
-    } else {
-      cell.style.cursor = "not-allowed";
-      cell.ondblclick = null;
+      cell.style.cursor = "pointer";
     }
   });
-
-  await loadDetailData(id_tt);
 
   document.getElementById("modalDetail").classList.add("show");
 }
 
 async function loadDetailData(id_tt) {
+  Utils.showLoading(true);
+
   try {
     // Load barang list
     const barangResult = await API.get(
       "readTandaTerimaBarang",
-      { id_tt },
+      { id_tt: id_tt },
       DB_TYPE
     );
     currentBarangList = barangResult.rows || [];
@@ -269,35 +284,20 @@ async function loadDetailData(id_tt) {
     // Load form data
     const formResult = await API.get(
       "readTandaTerimaFormData",
-      { id_tt },
+      { id_tt: id_tt },
       DB_TYPE
     );
-    const formData = formResult.rows?.[0];
 
-    if (formData) {
-      currentFormData = {
-        nama: formData.nama || "-",
-        nip: formData.nip || "-",
-        keterangan: formData.keterangan || "-",
-      };
+    if (formResult.rows && formResult.rows.length > 0) {
+      currentFormData = formResult.rows[0];
     } else {
-      currentFormData = {
-        nama: "-",
-        nip: "-",
-        keterangan: "-",
-      };
+      currentFormData = { nama: "-", nip: "-", keterangan: "-" };
     }
-
-    // Update form data display
-    document.querySelector('[data-field="nama"] .cell-value').textContent =
-      currentFormData.nama;
-    document.querySelector('[data-field="nip"] .cell-value').textContent =
-      currentFormData.nip;
-    document.querySelector(
-      '[data-field="keterangan"] .cell-value'
-    ).textContent = currentFormData.keterangan;
+    renderFormData();
   } catch (error) {
     console.error("Error loading detail data:", error);
+  } finally {
+    Utils.showLoading(false);
   }
 }
 
@@ -312,7 +312,7 @@ function closeDetailModal() {
 function renderBarangTable() {
   const tbody = document.getElementById("tableBarang");
 
-  if (currentBarangList.length === 0) {
+  if (!currentBarangList || currentBarangList.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted)">
@@ -323,24 +323,24 @@ function renderBarangTable() {
     return;
   }
 
-  const isDraft = currentTandaTerima?.status === "Draft";
+  const isSelesai = currentTandaTerima?.status === "Selesai";
 
   tbody.innerHTML = currentBarangList
     .map(
       (item, index) => `
     <tr>
       <td>${index + 1}</td>
-      <td><strong>${item.kodeBarang || "-"}</strong></td>
-      <td>${item.namaBarang || "-"}</td>
-      <td>${item.satuan || "-"}</td>
-      <td><strong>${item.jumlah || 0}</strong></td>
+      <td>${item.kodeBarang}</td>
+      <td>${item.namaBarang}</td>
+      <td>${item.satuan}</td>
+      <td><strong>${item.jumlah}</strong></td>
       <td>
         ${
-          isDraft
+          !isSelesai
             ? `
-        <button class="btn-delete-small" onclick="deleteBarangFromList('${item.kodeBarang}')" title="Hapus">
-          Hapus
-        </button>
+          <button class="btn-delete-small" onclick="deleteBarangFromList('${item.kodeBarang}')">
+            Hapus
+          </button>
         `
             : "-"
         }
@@ -353,14 +353,15 @@ function renderBarangTable() {
 
 // ==================== MODAL ADD BARANG ====================
 function openAddBarangModal() {
-  document.getElementById("addBarangForm").reset();
+  document.getElementById("selectBarang").value = "";
   document.getElementById("barangInfo").style.display = "none";
-  populateBarangDropdown();
+  document.getElementById("jumlahBarang").value = "";
   document.getElementById("modalAddBarang").classList.add("show");
 }
 
 function closeAddBarangModal() {
   document.getElementById("modalAddBarang").classList.remove("show");
+  document.getElementById("addBarangForm").reset();
 }
 
 function updateBarangInfo() {
@@ -369,6 +370,18 @@ function updateBarangInfo() {
   const barangInfo = document.getElementById("barangInfo");
 
   if (select.value) {
+    const isAlreadyAdded = currentBarangList.some(
+      (item) => item.kodeBarang === select.value
+    );
+
+    if (isAlreadyAdded) {
+      toast.warning("Barang ini sudah ada dalam daftar!", "Peringatan!");
+      select.value = "";
+      barangInfo.style.display = "none";
+      return;
+    }
+
+    // Show info
     barangInfo.style.display = "block";
     document.getElementById("infoKodeBarang").textContent = select.value;
     document.getElementById("infoNamaBarang").textContent =
@@ -377,16 +390,20 @@ function updateBarangInfo() {
       selectedOption.dataset.satuan || "-";
     document.getElementById("infoStok").textContent =
       selectedOption.dataset.stok || "0";
-    document.getElementById("jumlahBarang").max = selectedOption.dataset.stok;
+
+    // Set max for jumlah input
+    document.getElementById("jumlahBarang").max =
+      selectedOption.dataset.stok || 0;
+    document.getElementById("jumlahBarang").value = "";
   } else {
     barangInfo.style.display = "none";
   }
 }
 
 // Setup add barang form
-function setupAddBarangFormSubmit() {
-  const form = document.getElementById("addBarangForm");
-  form.addEventListener("submit", async function (e) {
+document
+  .getElementById("addBarangForm")
+  .addEventListener("submit", async function (e) {
     e.preventDefault();
 
     const select = document.getElementById("selectBarang");
@@ -430,8 +447,8 @@ function setupAddBarangFormSubmit() {
       Utils.showLoading(false);
     }
   });
-}
 
+// ==================== DELETE BARANG FROM LIST ====================
 async function deleteBarangFromList(kodeBarang) {
   toast.confirm(
     `Apakah Anda yakin ingin menghapus barang ${kodeBarang} dari daftar?`,
@@ -461,50 +478,68 @@ async function deleteBarangFromList(kodeBarang) {
   );
 }
 
-// ==================== EDIT CELL (DOUBLE CLICK) ====================
-function editCell(cell) {
-  // Check if already editing or not draft
-  if (
-    cell.classList.contains("editing") ||
-    currentTandaTerima?.status !== "Draft"
-  ) {
-    return;
-  }
+// ==================== EDITABLE TABLE ====================
+function renderFormData() {
+  document.querySelector('[data-field="nama"] .cell-value').textContent =
+    currentFormData.nama || "-";
+  document.querySelector('[data-field="nip"] .cell-value').textContent =
+    currentFormData.nip || "-";
+  document.querySelector('[data-field="keterangan"] .cell-value').textContent =
+    currentFormData.keterangan || "-";
+}
 
+function editCell(cell) {
+  const isSelesai = currentTandaTerima?.status === "Selesai";
+  if (isSelesai) return;
+
+  const field = cell.dataset.field;
   const valueSpan = cell.querySelector(".cell-value");
   const input = cell.querySelector(".cell-input");
-  const currentValue = valueSpan.textContent;
+
+  // Set current value
+  input.value = currentFormData[field] === "-" ? "" : currentFormData[field];
 
   // Show input, hide span
   valueSpan.style.display = "none";
   input.style.display = "block";
-  input.value = currentValue === "-" ? "" : currentValue;
   input.focus();
   input.select();
 
   cell.classList.add("editing");
 
   // Handle blur (save)
-  input.onblur = function () {
-    saveCell(cell);
+  input.onblur = async function () {
+    await saveCell(cell, field, input.value.trim());
   };
 
   // Handle Enter key
   input.onkeydown = function (e) {
     if (e.key === "Enter") {
-      e.preventDefault();
-      saveCell(cell);
-    } else if (e.key === "Escape") {
-      cancelEdit(cell);
+      input.blur();
+    }
+    if (e.key === "Escape") {
+      cancelEdit(cell, valueSpan, input);
     }
   };
 }
 
-async function saveCell(cell) {
+function cancelEdit(cell, valueSpan, input) {
+  valueSpan.style.display = "block";
+  input.style.display = "none";
+  cell.classList.remove("editing");
+}
+
+async function saveCell(cell, field, newValue) {
   const valueSpan = cell.querySelector(".cell-value");
   const input = cell.querySelector(".cell-input");
-  const field = cell.dataset.field;
-  const newValue = input.value.trim() || "-";
+
+  // If empty, set to "-"
+  if (!newValue) {
+    newValue = "-";
+  }
+
+  // Update local data
+  currentFormData[field] = newValue;
 
   // Update display
   valueSpan.textContent = newValue;
@@ -512,10 +547,9 @@ async function saveCell(cell) {
   input.style.display = "none";
   cell.classList.remove("editing");
 
-  // Update current form data
-  currentFormData[field] = newValue;
-
   // Save to backend
+  Utils.showLoading(true);
+
   try {
     await API.post(
       "updateTandaTerimaFormData",
@@ -527,23 +561,16 @@ async function saveCell(cell) {
       `Update ${field} tanda terima ${currentTandaTerima.id_tt}`
     );
   } catch (error) {
-    console.error("Error saving cell:", error);
-    toast.error("Gagal menyimpan perubahan: " + error.message, "Error!");
+    console.error("Error saving form data:", error);
+    toast.error("Gagal menyimpan data: " + error.message, "Error!");
+  } finally {
+    Utils.showLoading(false);
   }
 }
 
-function cancelEdit(cell) {
-  const valueSpan = cell.querySelector(".cell-value");
-  const input = cell.querySelector(".cell-input");
-
-  valueSpan.style.display = "block";
-  input.style.display = "none";
-  cell.classList.remove("editing");
-}
-
-// ==================== VALIDATE & PDF ====================
+// ==================== VALIDATE TANDA TERIMA ====================
 async function validateTandaTerima() {
-  if (currentBarangList.length === 0) {
+  if (!currentBarangList || currentBarangList.length === 0) {
     toast.warning(
       "Belum ada barang dalam daftar!\nTambahkan minimal 1 barang.",
       "Peringatan!"
@@ -552,10 +579,10 @@ async function validateTandaTerima() {
   }
 
   if (
+    !currentFormData.nama ||
     currentFormData.nama === "-" ||
-    currentFormData.nama === "" ||
-    currentFormData.nip === "-" ||
-    currentFormData.nip === ""
+    !currentFormData.nip ||
+    currentFormData.nip === "-"
   ) {
     toast.warning(
       "Data penerima belum lengkap!\nPastikan Nama dan NIP/NIM sudah diisi.",
@@ -572,33 +599,35 @@ async function validateTandaTerima() {
       try {
         const session = Auth.getSession();
 
-        // Create barang keluar entries
-        for (const item of currentBarangList) {
+        // Update status to Selesai
+        await API.post(
+          "updateTandaTerimaStatus",
+          {
+            id_tt: currentTandaTerima.id_tt,
+            status: "Selesai",
+            updatedBy: session.username,
+          },
+          DB_TYPE
+        );
+
+        // Update stok master barang (deduct)
+        for (const barang of currentBarangList) {
           await API.post(
             "barangKeluar",
             {
+              id_tt: currentTandaTerima.id_tt,
+              kodeBarang: barang.kodeBarang,
+              namaBarang: barang.namaBarang,
+              jumlah: barang.jumlah,
+              satuan: barang.satuan,
               tanggal: currentTandaTerima.tanggal,
-              kodeBarang: item.kodeBarang,
-              namaBarang: item.namaBarang,
-              jumlah: item.jumlah,
-              satuan: item.satuan,
-              keterangan: `Tanda Terima ${currentTandaTerima.id_tt}: ${currentTandaTerima.keterangan}`,
+              keterangan: `Barang keluar untuk: ${currentTandaTerima.keterangan}`,
               createdBy: session.username,
             },
             DB_TYPE
           );
         }
 
-        // Update tanda terima status
-        await API.post(
-          "updateTandaTerimaStatus",
-          {
-            id_tt: currentTandaTerima.id_tt,
-            status: "Selesai",
-            validatedBy: session.username,
-          },
-          DB_TYPE
-        );
         await Auth.logAudit(
           "VALIDATE_TANDA_TERIMA",
           `Validasi dan finalisasi tanda terima ${currentTandaTerima.id_tt}`
@@ -611,9 +640,10 @@ async function validateTandaTerima() {
 
         closeDetailModal();
         await loadData();
+        await loadMasterBarang();
       } catch (error) {
         console.error("Error validating:", error);
-        toast.error("Gagal validasi: " + error.message, "Error!");
+        toast.error("Gagal validasi data: " + error.message, "Error!");
       } finally {
         Utils.showLoading(false);
       }
@@ -621,44 +651,7 @@ async function validateTandaTerima() {
   );
 }
 
-// ==================== GENERATE PDF DIRECT (FROM TABLE) ====================
-async function generatePDFDirect(id_tt) {
-  Utils.showLoading(true);
-
-  try {
-    const tandaTerima = allData.find((d) => d.id_tt === id_tt);
-    if (!tandaTerima) {
-      throw new Error("Data tanda terima tidak ditemukan");
-    }
-
-    const barangResult = await API.get(
-      "readTandaTerimaBarang",
-      { id_tt: id_tt },
-      DB_TYPE
-    );
-    const barangList = barangResult.rows || [];
-
-    const formResult = await API.get(
-      "readTandaTerimaFormData",
-      { id_tt: id_tt },
-      DB_TYPE
-    );
-    const formData = formResult.rows?.[0] || {
-      nama: "-",
-      nip: "-",
-      keterangan: "-",
-    };
-
-    await generatePDFWithData(tandaTerima, barangList, formData);
-  } catch (error) {
-    console.error("Error generating PDF:", error);
-    toast.error("Gagal membuat PDF: " + error.message, "Error!");
-  } finally {
-    Utils.showLoading(false);
-  }
-}
-
-// ==================== GENERATE PDF (FROM DETAIL MODAL) ====================
+// ==================== GENERATE PDF ====================
 async function generatePDF() {
   if (currentTandaTerima.status !== "Selesai") {
     toast.warning(
@@ -684,10 +677,339 @@ async function generatePDF() {
   }
 }
 
+// ==================== GENERATE PDF DIRECT (FROM TABLE) ====================
+async function generatePDFDirect(id_tt) {
+  Utils.showLoading(true);
+
+  try {
+    // Load tanda terima data
+    const tandaTerima = allData.find((d) => d.id_tt === id_tt);
+    if (!tandaTerima) {
+      throw new Error("Data tanda terima tidak ditemukan");
+    }
+
+    // Load barang list
+    const barangResult = await API.get(
+      "readTandaTerimaBarang",
+      { id_tt: id_tt },
+      DB_TYPE
+    );
+    const barangList = barangResult.rows || [];
+
+    // Load form data
+    const formResult = await API.get(
+      "readTandaTerimaFormData",
+      { id_tt: id_tt },
+      DB_TYPE
+    );
+    const formData = formResult.rows?.[0] || {
+      nama: "-",
+      nip: "-",
+      keterangan: "-",
+    };
+
+    // Generate PDF
+    await generatePDFWithData(tandaTerima, barangList, formData);
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    toast.error("Gagal membuat PDF: " + error.message, "Error!");
+  } finally {
+    Utils.showLoading(false);
+  }
+}
+
 // ==================== GENERATE PDF CORE FUNCTION ====================
 async function generatePDFWithData(tandaTerima, barangList, formData) {
-  // ... same as Wisuda implementation ...
-  // (Copy the entire PDF generation logic from Wisuda)
+  if (typeof window.jspdf === "undefined") {
+    throw new Error(
+      "Library PDF belum ter-load. Silakan refresh halaman dan coba lagi."
+    );
+  }
+
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) {
+    throw new Error("jsPDF constructor not available");
+  }
+
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  let yPos = margin;
+
+  // ===== LOAD AND ADD LOGO =====
+  const logoBase64 = await loadLogoAsBase64();
+
+  // ===== HEADER WITH LOGO =====
+  const logoWidth = 25;
+  const logoHeight = 18;
+  const logoYPos = yPos;
+
+  if (logoBase64) {
+    doc.addImage(logoBase64, "PNG", margin, logoYPos, logoWidth, logoHeight);
+  }
+
+  // ===== HEADER TEXT (beside logo, vertically centered) =====
+  const headerStartX = margin + logoWidth + 6;
+  const logoCenter = logoYPos + logoHeight / 2;
+
+  // Calculate heights for vertical centering
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  const line1Height = 14 * 0.352778; // Convert pt to mm
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "italic");
+  const line2Height = 9 * 0.352778;
+
+  const totalTextHeight = line1Height + line2Height + 3; // 3mm spacing
+  const textStartY = logoCenter - totalTextHeight / 2 + line1Height / 2;
+
+  // Line 1: UNIVERSITAS TERBUKA PALANGKA RAYA
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("UNIVERSITAS TERBUKA PALANGKA RAYA", headerStartX, textStartY);
+
+  // Line 2: Sistem Inventori
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "italic");
+  doc.text(
+    "Sistem Inventori Wisuda & Rangkaian Sosprom (SIWARAS)",
+    headerStartX,
+    textStartY + line1Height + 3
+  );
+
+  // Update yPos after header
+  yPos =
+    Math.max(
+      logoYPos + logoHeight,
+      textStartY + line1Height + line2Height + 3
+    ) + 3;
+
+  // ===== HORIZONTAL LINE =====
+  doc.setLineWidth(0.8);
+  doc.setDrawColor(41, 128, 185);
+  doc.line(margin, yPos, pageWidth - margin, yPos);
+  yPos += 10;
+
+  // ===== TITLE =====
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  const titleWidth = doc.getTextWidth("TANDA TERIMA BARANG KELUAR");
+  doc.text("TANDA TERIMA BARANG KELUAR", (pageWidth - titleWidth) / 2, yPos);
+  yPos += 10;
+
+  // ===== DOCUMENT INFO =====
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+
+  const infoData = [
+    ["ID Tanda Terima", ":", String(tandaTerima.id_tt || "-")],
+    ["Tanggal", ":", String(Utils.formatDate(tandaTerima.tanggal) || "-")],
+    ["Keterangan", ":", String(tandaTerima.keterangan || "-")],
+    ["Status", ":", String(tandaTerima.status || "-")],
+  ];
+
+  infoData.forEach((row) => {
+    doc.text(String(row[0]), margin, yPos);
+    doc.text(String(row[1]), margin + 40, yPos);
+
+    const textValue = String(row[2]);
+    if (textValue.length > 50) {
+      const splitText = doc.splitTextToSize(textValue, pageWidth - margin - 50);
+      doc.text(splitText, margin + 45, yPos);
+      yPos += splitText.length * 5;
+    } else {
+      doc.text(textValue, margin + 45, yPos);
+      yPos += 6;
+    }
+  });
+
+  yPos += 5;
+
+  // ===== TABLE BARANG =====
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Daftar Barang:", margin, yPos);
+  yPos += 7;
+
+  const tableData = barangList.map((item, index) => [
+    String(index + 1),
+    String(item.kodeBarang || "-"),
+    String(item.namaBarang || "-"),
+    String(item.satuan || "-"),
+    String(item.jumlah || 0),
+  ]);
+
+  const tableWidth = pageWidth - 2 * margin;
+  const colWidths = {
+    no: 15,
+    kode: 30,
+    satuan: 25,
+    jumlah: 20,
+  };
+
+  const namaBarangWidth =
+    tableWidth -
+    colWidths.no -
+    colWidths.kode -
+    colWidths.satuan -
+    colWidths.jumlah;
+
+  doc.autoTable({
+    startY: yPos,
+    head: [["No", "Kode Barang", "Nama Barang", "Satuan", "Jumlah"]],
+    body: tableData,
+    theme: "grid",
+    headStyles: {
+      fillColor: [41, 128, 185],
+      textColor: 255,
+      fontStyle: "bold",
+      halign: "center",
+      fontSize: 10,
+    },
+    bodyStyles: {
+      fontSize: 9,
+      cellPadding: 3,
+    },
+    columnStyles: {
+      0: { halign: "center", cellWidth: colWidths.no },
+      1: { halign: "center", cellWidth: colWidths.kode },
+      2: { halign: "left", cellWidth: namaBarangWidth },
+      3: { halign: "center", cellWidth: colWidths.satuan },
+      4: { halign: "center", cellWidth: colWidths.jumlah },
+    },
+    margin: { left: margin, right: margin },
+    tableWidth: "auto",
+    styles: {
+      overflow: "linebreak",
+      cellWidth: "wrap",
+    },
+  });
+
+  yPos = doc.lastAutoTable.finalY + 10;
+
+  // ===== DATA PENERIMA =====
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Data Penerima:", margin, yPos);
+  yPos += 7;
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+
+  const penerimaData = [
+    ["Nama", ":", String(formData.nama || "-")],
+    ["NIP/NIM", ":", String(formData.nip || "-")],
+    ["Keterangan", ":", String(formData.keterangan || "-")],
+  ];
+
+  penerimaData.forEach((row) => {
+    doc.text(String(row[0]), margin, yPos);
+    doc.text(String(row[1]), margin + 30, yPos);
+
+    const textValue = String(row[2]);
+    if (textValue.length > 60) {
+      const splitText = doc.splitTextToSize(textValue, pageWidth - margin - 40);
+      doc.text(splitText, margin + 35, yPos);
+      yPos += splitText.length * 5;
+    } else {
+      doc.text(textValue, margin + 35, yPos);
+      yPos += 6;
+    }
+  });
+
+  yPos += 10;
+
+  // ===== SIGNATURE SECTION =====
+  const signatureY = pageHeight - 55;
+  yPos = Math.max(yPos, signatureY);
+
+  const printDate = new Date().toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Palangka Raya, ${printDate}`, margin, yPos);
+
+  yPos += 10;
+
+  const col1X = margin + 25;
+  const col2X = pageWidth - margin - 55;
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Yang Menyerahkan,", col1X, yPos);
+  doc.text("Yang Menerima,", col2X, yPos);
+
+  yPos += 20;
+
+  doc.setLineWidth(0.5);
+  doc.line(col1X - 5, yPos, col1X + 50, yPos);
+  doc.line(col2X - 5, yPos, col2X + 50, yPos);
+
+  yPos += 5;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text(String(tandaTerima.createdBy || "Admin"), col1X, yPos);
+  doc.text(String(formData.nama || "-"), col2X, yPos);
+
+  // ===== FOOTER =====
+  const footerY = pageHeight - 10;
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(120);
+  const footerText = `Dokumen ini dicetak otomatis oleh SIWARAS UT pada ${new Date().toLocaleString(
+    "id-ID"
+  )}`;
+  const footerWidth = doc.getTextWidth(footerText);
+  doc.text(footerText, (pageWidth - footerWidth) / 2, footerY);
+
+  // ===== SAVE PDF =====
+  const fileName = `TandaTerima_${tandaTerima.id_tt}_${Date.now()}.pdf`;
+  doc.save(fileName);
+
+  await Auth.logAudit(
+    "GENERATE_PDF_TANDA_TERIMA",
+    `Generate PDF tanda terima ${tandaTerima.id_tt}`
+  );
+
+  toast.success("PDF berhasil dibuat dan diunduh!", "Berhasil!");
+}
+
+// Helper function to load logo as base64
+async function loadLogoAsBase64() {
+  try {
+    const logoPath = "../../assets/icon/logo-ut.png";
+
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+
+      img.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL("image/png");
+        resolve(dataURL);
+      };
+
+      img.onerror = function () {
+        console.warn("Could not load logo image");
+        resolve(null);
+      };
+
+      img.src = logoPath;
+    });
+  } catch (error) {
+    console.error("Error loading logo:", error);
+    return null;
+  }
 }
 
 // ==================== DELETE TANDA TERIMA ====================
@@ -731,17 +1053,18 @@ async function deleteTandaTerima(id_tt) {
   );
 }
 
-// At end - handleLogout
+// ==================== LOGOUT ====================
 function handleLogout() {
-  toast.confirm("Apakah Anda yakin ingin keluar?", async () => {
+  toast.confirm("Apakah Anda yakin ingin keluar dari sistem?", async () => {
     try {
       await Auth.logAudit("LOGOUT_ADMIN_SOSPROM", "Admin Sosprom logout");
       Auth.clearSession();
-      toast.success("Logout berhasil!", "Goodbye!");
+      toast.success("Logout berhasil! Sampai jumpa", "Goodbye!");
       setTimeout(() => {
         window.location.href = "../../index.html";
       }, 1000);
     } catch (error) {
+      console.error("Logout error:", error);
       Auth.clearSession();
       window.location.href = "../../index.html";
     }
