@@ -8,10 +8,51 @@ let barChartInstance = null;
 
 // Load data on page load
 document.addEventListener("DOMContentLoaded", async function () {
+  initTheme(); // Initialize theme first
   await loadData();
   setupSearch();
 });
 
+// ==================== THEME MANAGEMENT ====================
+function initTheme() {
+  const savedTheme = localStorage.getItem("siwaras_theme") || "light";
+  document.documentElement.setAttribute("data-theme", savedTheme);
+  console.log("Theme initialized:", savedTheme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute("data-theme");
+  const newTheme = currentTheme === "light" ? "dark" : "light";
+
+  document.documentElement.setAttribute("data-theme", newTheme);
+  localStorage.setItem("siwaras_theme", newTheme);
+
+  if (window.toast) {
+    toast.success(
+      `Mode ${newTheme === "dark" ? "Gelap" : "Terang"} diaktifkan!`,
+      "Tema Diubah"
+    );
+  }
+
+  console.log("Theme changed to:", newTheme);
+
+  // Re-render charts with new theme colors
+  loadData();
+}
+
+// Helper: Get chart text color based on theme
+function getChartTextColor() {
+  const theme = document.documentElement.getAttribute("data-theme");
+  return theme === "dark" ? "#ffffff" : "#475569";
+}
+
+// Helper: Get chart grid color based on theme
+function getChartGridColor() {
+  const theme = document.documentElement.getAttribute("data-theme");
+  return theme === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)";
+}
+
+// ==================== DATA MANAGEMENT ====================
 async function loadData() {
   Utils.showLoading(true);
   try {
@@ -118,6 +159,9 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
   if (lineChartInstance) lineChartInstance.destroy();
   if (barChartInstance) barChartInstance.destroy();
 
+  const textColor = getChartTextColor();
+  const gridColor = getChartGridColor();
+
   // ===== LINE CHART: Trend Barang Masuk & Keluar (Last 7 Days) =====
   const lineCtx = document.getElementById("lineChart");
   if (lineCtx) {
@@ -179,6 +223,7 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
               font: {
                 size: 12,
               },
+              color: textColor, // Dynamic color
             },
           },
           title: {
@@ -191,6 +236,7 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
             padding: {
               bottom: 20,
             },
+            color: textColor, // Dynamic color
           },
           tooltip: {
             backgroundColor: "rgba(0, 0, 0, 0.8)",
@@ -212,9 +258,10 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
               font: {
                 size: 11,
               },
+              color: textColor, // Dynamic color
             },
             grid: {
-              color: "rgba(0, 0, 0, 0.05)",
+              color: gridColor, // Dynamic color
             },
           },
           x: {
@@ -222,6 +269,7 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
               font: {
                 size: 11,
               },
+              color: textColor, // Dynamic color
             },
             grid: {
               display: false,
@@ -285,6 +333,7 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
             padding: {
               bottom: 20,
             },
+            color: textColor, // Dynamic color
           },
           tooltip: {
             backgroundColor: "rgba(0, 0, 0, 0.8)",
@@ -310,9 +359,10 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
               font: {
                 size: 11,
               },
+              color: textColor, // Dynamic color
             },
             grid: {
-              color: "rgba(0, 0, 0, 0.05)",
+              color: gridColor, // Dynamic color
             },
           },
           x: {
@@ -322,6 +372,7 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
               },
               maxRotation: 45,
               minRotation: 45,
+              color: textColor, // Dynamic color
             },
             grid: {
               display: false,

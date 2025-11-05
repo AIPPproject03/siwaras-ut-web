@@ -96,19 +96,31 @@
 
 /* Table Wrapper Small */
 .table-wrapper-small {
-  background: white;
+  background: var(--surface);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  transition: var(--transition);
+}
+
+[data-theme="dark"] .table-wrapper-small {
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .detail-table {
   width: 100%;
   border-collapse: collapse;
+  background: var(--surface);
 }
 
 .detail-table thead {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: var(--muted);
+  transition: var(--transition);
+}
+
+[data-theme="dark"] .detail-table thead {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .detail-table thead th {
@@ -116,21 +128,37 @@
   text-align: left;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 2px solid var(--line);
+}
+
+[data-theme="dark"] .detail-table thead th {
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .detail-table tbody td {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   font-size: 14px;
   color: var(--text);
+  background: var(--surface);
+}
+
+[data-theme="dark"] .detail-table tbody td {
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--surface);
 }
 
 .detail-table tbody tr:hover {
   background: var(--muted);
+}
+
+[data-theme="dark"] .detail-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .detail-table tbody tr:last-child td {
@@ -145,30 +173,29 @@
 }
 
 .editable-table .editable:hover {
-  background: var(--primary-light);
+  background: var(--muted);
+}
+
+[data-theme="dark"] .editable-table .editable:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .editable-table .editable.editing {
-  padding: 0;
-  background: white;
+  background: var(--primary-light);
+  padding: 8px;
 }
 
-.editable-table .cell-value {
-  display: block;
-  min-height: 20px;
+[data-theme="dark"] .editable-table .editable.editing {
+  background: rgba(96, 165, 250, 0.2);
 }
 
-.editable-table .cell-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 2px solid var(--primary);
-  border-radius: 4px;
-  font-size: 14px;
-  outline: none;
+/* Cell values in editable table */
+.cell-value {
+  color: var(--text);
 }
 
-.editable-table .cell-input:focus {
-  border-color: #0369a1;
+[data-theme="dark"] .cell-value {
+  color: #ffffff !important;
 }
 
 /* Info Card */

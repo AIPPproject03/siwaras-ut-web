@@ -4,6 +4,8 @@ const DB_TYPE = "wisuda";
 
 // Check authentication
 document.addEventListener("DOMContentLoaded", function () {
+  initTheme(); // Initialize theme first
+
   const session = Auth.getSession();
   if (!session.username || session.role !== "admin-sosprom") {
     toast.error("Anda harus login sebagai Admin Sosprom!", "Akses Ditolak!");
@@ -16,6 +18,30 @@ document.addEventListener("DOMContentLoaded", function () {
   loadData();
   setupSearch();
 });
+
+// ==================== THEME MANAGEMENT ====================
+function initTheme() {
+  const savedTheme = localStorage.getItem("siwaras_theme") || "light";
+  document.documentElement.setAttribute("data-theme", savedTheme);
+  console.log("Theme initialized:", savedTheme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute("data-theme");
+  const newTheme = currentTheme === "light" ? "dark" : "light";
+
+  document.documentElement.setAttribute("data-theme", newTheme);
+  localStorage.setItem("siwaras_theme", newTheme);
+
+  if (window.toast) {
+    toast.success(
+      `Mode ${newTheme === "dark" ? "Gelap" : "Terang"} diaktifkan!`,
+      "Tema Diubah"
+    );
+  }
+
+  console.log("Theme changed to:", newTheme);
+}
 
 async function loadData() {
   Utils.showLoading(true);

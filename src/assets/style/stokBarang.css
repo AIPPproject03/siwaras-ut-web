@@ -1,9 +1,15 @@
 /* ========== Stok Barang Page ========== */
 .stok-barang-section {
-  background: white;
+  background: var(--surface);
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: var(--transition);
+}
+
+[data-theme="dark"] .stok-barang-section {
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .stok-header {
@@ -32,10 +38,16 @@
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: #f8f9fa;
+  background: var(--muted);
   border: 1px solid var(--line);
   border-radius: 8px;
   min-width: 300px;
+  transition: var(--transition);
+}
+
+[data-theme="dark"] .search-box {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .search-box svg {
@@ -43,6 +55,10 @@
   height: 18px;
   fill: var(--text-muted);
   flex-shrink: 0;
+}
+
+[data-theme="dark"] .search-box svg {
+  fill: rgba(255, 255, 255, 0.6);
 }
 
 .search-box input {
@@ -54,8 +70,16 @@
   color: var(--text);
 }
 
+[data-theme="dark"] .search-box input {
+  color: #ffffff;
+}
+
 .search-box input::placeholder {
   color: var(--text-muted);
+}
+
+[data-theme="dark"] .search-box input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .sort-btn {
@@ -63,7 +87,7 @@
   align-items: center;
   gap: 6px;
   padding: 10px 14px;
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
   cursor: pointer;
@@ -73,10 +97,20 @@
   transition: all 0.2s;
 }
 
+[data-theme="dark"] .sort-btn {
+  background: var(--surface);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
 .sort-btn:hover {
   background: var(--muted);
   border-color: var(--primary);
   color: var(--primary);
+}
+
+[data-theme="dark"] .sort-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .sort-btn svg {
@@ -139,35 +173,64 @@
   overflow-x: auto;
   border-radius: 8px;
   border: 1px solid var(--line);
+  background: var(--surface);
+  transition: var(--transition);
+}
+
+[data-theme="dark"] .table-wrapper {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--surface);
 }
 
 .stok-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  background: var(--surface);
 }
 
 .stok-table thead {
-  background: #f8f9fa;
+  background: var(--muted);
+  transition: var(--transition);
+}
+
+[data-theme="dark"] .stok-table thead {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .stok-table th {
   text-align: left;
   padding: 14px 16px;
   font-weight: 600;
-  color: var(--text-soft);
+  color: var(--text);
   border-bottom: 2px solid var(--line);
   white-space: nowrap;
+}
+
+[data-theme="dark"] .stok-table th {
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .stok-table td {
   padding: 14px 16px;
   color: var(--text);
   border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+[data-theme="dark"] .stok-table td {
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--surface);
 }
 
 .stok-table tbody tr:hover {
-  background: #f8f9fa;
+  background: var(--muted);
+}
+
+[data-theme="dark"] .stok-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .stok-table tbody tr:last-child td {
@@ -283,7 +346,7 @@
 }
 
 .modal-content {
-  background: white;
+  background: var(--surface);
   border-radius: 16px;
   width: 90%;
   max-width: 500px;
@@ -291,6 +354,12 @@
   overflow-y: auto;
   animation: slideUp 0.3s;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  transition: var(--transition);
+}
+
+[data-theme="dark"] .modal-content {
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
 
 .modal-header {
@@ -301,11 +370,19 @@
   border-bottom: 1px solid var(--line);
 }
 
+[data-theme="dark"] .modal-header {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
 .modal-header h2 {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
   color: var(--text);
+}
+
+[data-theme="dark"] .modal-header h2 {
+  color: #ffffff;
 }
 
 .btn-close {
@@ -325,10 +402,18 @@
   background: var(--muted);
 }
 
+[data-theme="dark"] .btn-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .btn-close svg {
   width: 20px;
   height: 20px;
   fill: var(--text-soft);
+}
+
+[data-theme="dark"] .btn-close svg {
+  fill: rgba(255, 255, 255, 0.7);
 }
 
 .modal-content form {
@@ -347,6 +432,10 @@
   color: var(--text);
 }
 
+[data-theme="dark"] .form-group label {
+  color: #ffffff;
+}
+
 .form-control {
   width: 100%;
   padding: 10px 14px;
@@ -354,14 +443,25 @@
   border-radius: 8px;
   font-size: 14px;
   color: var(--text);
+  background: var(--bg);
   transition: all 0.2s;
   box-sizing: border-box;
+}
+
+[data-theme="dark"] .form-control {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .form-control:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+}
+
+[data-theme="dark"] .form-control:focus {
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
 }
 
 .form-row {
@@ -398,9 +498,19 @@ textarea.form-control {
   color: var(--text-soft);
 }
 
+[data-theme="dark"] .btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .btn-cancel:hover {
   background: #e2e8f0;
   color: var(--text);
+}
+
+[data-theme="dark"] .btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
 }
 
 .btn-submit {
@@ -430,10 +540,22 @@ textarea.form-control {
   border: 1px solid #c3e6cb;
 }
 
+[data-theme="dark"] .status-tersedia {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
 .status-habis {
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
+}
+
+[data-theme="dark"] .status-habis {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 /* ========== Info Button ========== */
@@ -479,6 +601,10 @@ textarea.form-control {
   border-left: 4px solid var(--primary);
 }
 
+[data-theme="dark"] .info-item {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .info-item h4 {
   margin: 0 0 8px 0;
   font-size: 16px;
@@ -486,11 +612,19 @@ textarea.form-control {
   color: var(--text);
 }
 
+[data-theme="dark"] .info-item h4 {
+  color: #ffffff;
+}
+
 .info-item p {
   margin: 0;
   font-size: 14px;
   color: var(--text-soft);
   line-height: 1.6;
+}
+
+[data-theme="dark"] .info-item p {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .info-item strong {
@@ -505,6 +639,10 @@ textarea.form-control {
   font-size: 12px;
   color: var(--text-muted);
   font-style: italic;
+}
+
+[data-theme="dark"] .form-hint {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* ========== Action Buttons Gap ========== */
@@ -523,22 +661,35 @@ textarea.form-control {
   border-radius: 8px;
 }
 
+[data-theme="dark"] .mode-selection {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .mode-option {
   flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: white;
-  border: 2px solid var(--border);
+  background: var(--surface);
+  border: 2px solid var(--line);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
+[data-theme="dark"] .mode-option {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
 .mode-option:hover {
   border-color: var(--primary);
   background: var(--primary-light);
+}
+
+[data-theme="dark"] .mode-option:hover {
+  background: rgba(96, 165, 250, 0.15);
 }
 
 .mode-option input[type="radio"] {
@@ -555,6 +706,10 @@ textarea.form-control {
 .mode-option span {
   font-size: 14px;
   color: var(--text);
+}
+
+[data-theme="dark"] .mode-option span {
+  color: #ffffff;
 }
 
 /* Existing Barang Info Card */
@@ -598,16 +753,84 @@ textarea.form-control {
 /* ========== Select Dropdown Enhancement ========== */
 select.form-control {
   padding-right: 40px;
+  background-color: var(--bg);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   background-size: 18px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   appearance: none;
   cursor: pointer;
 }
 
+[data-theme="dark"] select.form-control {
+  background-color: rgba(255, 255, 255, 0.05);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
+}
+
 select.form-control:focus {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230284c7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+/* Dark mode: Select options styling */
+[data-theme="dark"] select.form-control option {
+  background: #1e293b;
+  color: #ffffff;
+  padding: 8px;
+}
+
+[data-theme="dark"] select.form-control option:hover {
+  background: #334155;
+}
+
+[data-theme="dark"] select.form-control option:checked {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+[data-theme="dark"] select.form-control option[disabled] {
+  color: rgba(255, 255, 255, 0.4);
+  background: #1e293b;
+}
+
+/* Remove default dropdown arrow in all browsers */
+select.form-control::-ms-expand {
+  display: none;
+}
+
+/* Dark mode: Input date & number pickers */
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+[data-theme="dark"] input[type="number"]::-webkit-inner-spin-button,
+[data-theme="dark"] input[type="number"]::-webkit-outer-spin-button {
+  filter: invert(1);
+}
+
+/* Dark mode: Date picker text */
+[data-theme="dark"] input[type="date"]::-webkit-datetime-edit {
+  color: #ffffff;
+}
+
+[data-theme="dark"] input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: #ffffff;
+}
+
+[data-theme="dark"] input[type="date"]::-webkit-datetime-edit-text {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme="dark"] input[type="date"]::-webkit-datetime-edit-month-field,
+[data-theme="dark"] input[type="date"]::-webkit-datetime-edit-day-field,
+[data-theme="dark"] input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #ffffff;
 }
 
 /* ========== Action Buttons ========== */

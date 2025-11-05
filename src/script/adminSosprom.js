@@ -8,6 +8,8 @@ let barChartInstance = null;
 
 // Check authentication
 document.addEventListener("DOMContentLoaded", function () {
+  initTheme(); // Initialize theme first
+
   const session = Auth.getSession();
   if (!session.username || session.role !== "admin-sosprom") {
     toast.error("Anda harus login sebagai Admin Sosprom!", "Akses Ditolak!");
@@ -20,6 +22,45 @@ document.addEventListener("DOMContentLoaded", function () {
   loadDashboardData();
   setupSearch();
 });
+
+// ==================== THEME MANAGEMENT ====================
+function initTheme() {
+  const savedTheme = localStorage.getItem("siwaras_theme") || "light";
+  document.documentElement.setAttribute("data-theme", savedTheme);
+  console.log("Theme initialized:", savedTheme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute("data-theme");
+  const newTheme = currentTheme === "light" ? "dark" : "light";
+
+  document.documentElement.setAttribute("data-theme", newTheme);
+  localStorage.setItem("siwaras_theme", newTheme);
+
+  if (window.toast) {
+    toast.success(
+      `Mode ${newTheme === "dark" ? "Gelap" : "Terang"} diaktifkan!`,
+      "Tema Diubah"
+    );
+  }
+
+  console.log("Theme changed to:", newTheme);
+
+  // Re-render charts with new theme colors
+  loadDashboardData();
+}
+
+// Helper: Get chart text color based on theme
+function getChartTextColor() {
+  const theme = document.documentElement.getAttribute("data-theme");
+  return theme === "dark" ? "#ffffff" : "#475569";
+}
+
+// Helper: Get chart grid color based on theme
+function getChartGridColor() {
+  const theme = document.documentElement.getAttribute("data-theme");
+  return theme === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)";
+}
 
 async function loadDashboardData() {
   Utils.showLoading(true);
@@ -53,6 +94,7 @@ async function loadDashboardData() {
 
     allData = masterBarang.rows || [];
     renderTable(allData);
+
     initCharts(
       barangMasuk.rows || [],
       barangKeluar.rows || [],
@@ -102,8 +144,7 @@ function setupSearch() {
     const filtered = allData.filter(
       (item) =>
         item.kodeBarang?.toLowerCase().includes(keyword) ||
-        item.namaBarang?.toLowerCase().includes(keyword) ||
-        item.satuan?.toLowerCase().includes(keyword)
+        item.namaBarang?.toLowerCase().includes(keyword)
     );
     renderTable(filtered);
   });
@@ -125,7 +166,10 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
   if (lineChartInstance) lineChartInstance.destroy();
   if (barChartInstance) barChartInstance.destroy();
 
-  // ===== LINE CHART: Trend Barang Masuk & Keluar (Last 7 Days) =====
+  const textColor = getChartTextColor();
+  const gridColor = getChartGridColor();
+
+  // ===== LINE CHART =====
   const lineCtx = document.getElementById("lineChart");
   if (lineCtx) {
     const last7Days = getLast7Days();
@@ -154,6 +198,7 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
             data: masukData,
             borderColor: "#10b981",
             backgroundColor: "rgba(16, 185, 129, 0.1)",
+            borderWidth: 3,
             tension: 0.4,
             fill: true,
             pointRadius: 5,
@@ -167,6 +212,7 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
             data: keluarData,
             borderColor: "#ef4444",
             backgroundColor: "rgba(239, 68, 68, 0.1)",
+            borderWidth: 3,
             tension: 0.4,
             fill: true,
             pointRadius: 5,
@@ -191,6 +237,7 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
                 size: 12,
                 weight: "600",
               },
+              color: textColor,
             },
           },
           title: {
@@ -203,22 +250,18 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
             padding: {
               bottom: 20,
             },
+            color: textColor,
           },
           tooltip: {
             backgroundColor: "rgba(0, 0, 0, 0.8)",
             padding: 12,
             titleFont: {
               size: 14,
-              weight: "bold",
             },
             bodyFont: {
               size: 13,
             },
-            callbacks: {
-              label: function (context) {
-                return `${context.dataset.label}: ${context.parsed.y} item`;
-              },
-            },
+            displayColors: true,
           },
         },
         scales: {
@@ -227,11 +270,12 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
             ticks: {
               stepSize: 1,
               font: {
-                size: 12,
+                size: 11,
               },
+              color: textColor,
             },
             grid: {
-              color: "rgba(0, 0, 0, 0.05)",
+              color: gridColor,
             },
           },
           x: {
@@ -239,6 +283,7 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
               font: {
                 size: 11,
               },
+              color: textColor,
             },
             grid: {
               display: false,
@@ -249,7 +294,7 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
     });
   }
 
-  // ===== BAR CHART: Top 10 Barang (By Stock) =====
+  // ===== BAR CHART =====
   const barCtx = document.getElementById("barChart");
   if (barCtx) {
     const sortedBarang = [...masterBarang]
@@ -259,9 +304,8 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
     const labels = sortedBarang.map((item) => item.namaBarang || "N/A");
     const data = sortedBarang.map((item) => parseInt(item.stok) || 0);
 
-    // Generate gradient colors
     const backgroundColors = data.map((_, index) => {
-      const hue = 200 - index * 15; // From blue to purple
+      const hue = 200 - index * 15;
       return `hsla(${hue}, 70%, 60%, 0.8)`;
     });
 
@@ -303,13 +347,13 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
             padding: {
               bottom: 20,
             },
+            color: textColor,
           },
           tooltip: {
             backgroundColor: "rgba(0, 0, 0, 0.8)",
             padding: 12,
             titleFont: {
               size: 14,
-              weight: "bold",
             },
             bodyFont: {
               size: 13,
@@ -325,13 +369,14 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
           y: {
             beginAtZero: true,
             ticks: {
-              stepSize: 5,
+              stepSize: 1,
               font: {
-                size: 12,
+                size: 11,
               },
+              color: textColor,
             },
             grid: {
-              color: "rgba(0, 0, 0, 0.05)",
+              color: gridColor,
             },
           },
           x: {
@@ -341,6 +386,7 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
               },
               maxRotation: 45,
               minRotation: 45,
+              color: textColor,
             },
             grid: {
               display: false,
@@ -352,7 +398,6 @@ function initCharts(barangMasuk, barangKeluar, masterBarang) {
   }
 }
 
-// Helper: Get last 7 days in YYYY-MM-DD format
 function getLast7Days() {
   const days = [];
   for (let i = 6; i >= 0; i--) {
@@ -363,7 +408,6 @@ function getLast7Days() {
   return days;
 }
 
-// Helper: Format date label (e.g., "Senin, 20/01")
 function formatDateLabel(dateStr) {
   const date = new Date(dateStr + "T00:00:00");
   const days = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
