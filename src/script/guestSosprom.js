@@ -1,6 +1,10 @@
 let allData = [];
 let sortAscending = true;
-const DB_TYPE = "sosprom"; // Database type untuk Sosprom
+const DB_TYPE = "sosprom";
+
+// Chart instances
+let lineChartInstance = null;
+let barChartInstance = null;
 
 // Load data on page load
 document.addEventListener("DOMContentLoaded", async function () {
@@ -45,6 +49,9 @@ async function loadData() {
 
     // Render table
     renderTable(allData);
+
+    // Initialize charts
+    initCharts(barangMasuk.rows || [], barangKeluar.rows || [], allData);
   } catch (error) {
     console.error("Error loading data:", error);
     toast.error("Gagal memuat data: " + error.message, "Error!");
@@ -89,8 +96,7 @@ function setupSearch() {
     const filtered = allData.filter(
       (item) =>
         item.kodeBarang?.toLowerCase().includes(keyword) ||
-        item.namaBarang?.toLowerCase().includes(keyword) ||
-        item.satuan?.toLowerCase().includes(keyword)
+        item.namaBarang?.toLowerCase().includes(keyword)
     );
     renderTable(filtered);
   });
@@ -104,6 +110,248 @@ function toggleSort() {
     return sortAscending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
   });
   renderTable(sorted);
+}
+
+// ==================== CHARTS ====================
+function initCharts(barangMasuk, barangKeluar, masterBarang) {
+  // Destroy existing charts
+  if (lineChartInstance) lineChartInstance.destroy();
+  if (barChartInstance) barChartInstance.destroy();
+
+  // ===== LINE CHART: Trend Barang Masuk & Keluar (Last 7 Days) =====
+  const lineCtx = document.getElementById("lineChart");
+  if (lineCtx) {
+    const last7Days = getLast7Days();
+    const masukData = last7Days.map(
+      (date) =>
+        barangMasuk.filter(
+          (item) => item.tanggal && item.tanggal.split("T")[0] === date
+        ).length
+    );
+    const keluarData = last7Days.map(
+      (date) =>
+        barangKeluar.filter(
+          (item) => item.tanggal && item.tanggal.split("T")[0] === date
+        ).length
+    );
+
+    const labels = last7Days.map((date) => formatDateLabel(date));
+
+    lineChartInstance = new Chart(lineCtx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Barang Masuk",
+            data: masukData,
+            borderColor: "#10b981",
+            backgroundColor: "rgba(16, 185, 129, 0.1)",
+            borderWidth: 3,
+            tension: 0.4,
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+          },
+          {
+            label: "Barang Keluar",
+            data: keluarData,
+            borderColor: "#ef4444",
+            backgroundColor: "rgba(239, 68, 68, 0.1)",
+            borderWidth: 3,
+            tension: 0.4,
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: "top",
+            labels: {
+              usePointStyle: true,
+              padding: 15,
+              font: {
+                size: 12,
+              },
+            },
+          },
+          title: {
+            display: true,
+            text: "Trend Barang Masuk & Keluar (7 Hari Terakhir)",
+            font: {
+              size: 16,
+              weight: "bold",
+            },
+            padding: {
+              bottom: 20,
+            },
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            padding: 12,
+            titleFont: {
+              size: 14,
+            },
+            bodyFont: {
+              size: 13,
+            },
+            displayColors: true,
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1,
+              font: {
+                size: 11,
+              },
+            },
+            grid: {
+              color: "rgba(0, 0, 0, 0.05)",
+            },
+          },
+          x: {
+            ticks: {
+              font: {
+                size: 11,
+              },
+            },
+            grid: {
+              display: false,
+            },
+          },
+        },
+      },
+    });
+  }
+
+  // ===== BAR CHART: Top 10 Barang (by Stok) =====
+  const barCtx = document.getElementById("barChart");
+  if (barCtx) {
+    const sortedBarang = [...masterBarang]
+      .sort((a, b) => (parseInt(b.stok) || 0) - (parseInt(a.stok) || 0))
+      .slice(0, 10);
+
+    const labels = sortedBarang.map((item) => item.namaBarang || "N/A");
+    const data = sortedBarang.map((item) => parseInt(item.stok) || 0);
+
+    const backgroundColors = data.map((_, index) => {
+      const hue = 200 - index * 15;
+      return `hsla(${hue}, 70%, 60%, 0.8)`;
+    });
+
+    const borderColors = data.map((_, index) => {
+      const hue = 200 - index * 15;
+      return `hsla(${hue}, 70%, 50%, 1)`;
+    });
+
+    barChartInstance = new Chart(barCtx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Jumlah Stok",
+            data: data,
+            backgroundColor: backgroundColors,
+            borderColor: borderColors,
+            borderWidth: 2,
+            borderRadius: 8,
+            barPercentage: 0.7,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          title: {
+            display: true,
+            text: "Top 10 Barang (Berdasarkan Stok)",
+            font: {
+              size: 16,
+              weight: "bold",
+            },
+            padding: {
+              bottom: 20,
+            },
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            padding: 12,
+            titleFont: {
+              size: 14,
+            },
+            bodyFont: {
+              size: 13,
+            },
+            callbacks: {
+              label: function (context) {
+                return `Stok: ${context.parsed.y} unit`;
+              },
+            },
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1,
+              font: {
+                size: 11,
+              },
+            },
+            grid: {
+              color: "rgba(0, 0, 0, 0.05)",
+            },
+          },
+          x: {
+            ticks: {
+              font: {
+                size: 10,
+              },
+              maxRotation: 45,
+              minRotation: 45,
+            },
+            grid: {
+              display: false,
+            },
+          },
+        },
+      },
+    });
+  }
+}
+
+// Helper: Get last 7 days in YYYY-MM-DD format
+function getLast7Days() {
+  const dates = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    dates.push(date.toISOString().split("T")[0]);
+  }
+  return dates;
+}
+
+// Helper: Format date label (e.g., "Senin, 20/01")
+function formatDateLabel(dateStr) {
+  const date = new Date(dateStr + "T00:00:00");
+  const days = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+  const dayName = days[date.getDay()];
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dayName}, ${day}/${month}`;
 }
 
 function handleLogout() {
