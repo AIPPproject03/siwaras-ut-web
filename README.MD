@@ -585,32 +585,6 @@ Response:
 | action    | TEXT     | Action type        |
 | details   | TEXT     | Action details     |
 
-## 📸 Screenshot
-
-### Landing Page
-
-![Landing Page](docs/screenshots/landing.png)
-
-### Dashboard (Light Mode)
-
-![Dashboard Light](docs/screenshots/dashboard-light.png)
-
-### Dashboard (Dark Mode)
-
-![Dashboard Dark](docs/screenshots/dashboard-dark.png)
-
-### Barang Masuk
-
-![Barang Masuk](docs/screenshots/barang-masuk.png)
-
-### Tanda Terima
-
-![Tanda Terima](docs/screenshots/tanda-terima.png)
-
-### PDF Output
-
-![PDF Output](docs/screenshots/pdf-output.png)
-
 ## 🤝 Kontribusi
 
 Kontribusi sangat dihargai! Untuk berkontribusi:
