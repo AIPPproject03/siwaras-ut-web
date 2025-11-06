@@ -17,7 +17,6 @@
 - [Dark Mode](#-dark-mode)
 - [API Documentation](#-api-documentation)
 - [Database Schema](#-database-schema)
-- [Screenshot](#-screenshot)
 - [Kontribusi](#-kontribusi)
 - [Lisensi](#-lisensi)
 - [Tim Pengembang](#-tim-pengembang)
@@ -644,17 +643,16 @@ SOFTWARE.
 
 ### Development Team
 
-- **Project Lead**: [Your Name]
-- **Backend Developer**: [Developer Name]
-- **Frontend Developer**: [Developer Name]
-- **UI/UX Designer**: [Designer Name]
+- **Project Lead**: Ria Agustin & A.Irwin Putra Pangesti
+- **Fullstack Developer**: A.Irwin Putra Pangesti
+- **UI/UX Designer**: Ria Agustin
 
 ### Client
 
 **Universitas Terbuka Palangka Raya**
 
 - **Alamat**: Jl. G. Obos No.30, Palangka Raya, Kalimantan Tengah
-- **Website**: [https://www.ut.ac.id](https://www.ut.ac.id)
+- **Website**: [https://palangkaraya.ut.ac.id/](https://palangkaraya.ut.ac.id)
 - **Email**: ut-palangkaraya@ut.ac.id
 
 ## 🙏 Acknowledgments
@@ -666,7 +664,7 @@ SOFTWARE.
 
 ## 📞 Kontak & Support
 
-- **Email**: support@ut-palangkaraya.ac.id
+- **Email**: aipp.project@gmail.com
 - **GitHub Issues**: [Report a bug](https://github.com/AIPPproject03/siwaras-ut-web/issues)
 - **Documentation**: [Wiki](https://github.com/AIPPproject03/siwaras-ut-web/wiki)
 
