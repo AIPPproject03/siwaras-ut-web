@@ -766,57 +766,85 @@ async function generatePDFWithData(tandaTerima, barangList, formData) {
   // ===== LOAD AND ADD LOGO =====
   const logoBase64 = await loadLogoAsBase64();
 
-  // ===== HEADER WITH LOGO =====
-  const logoWidth = 25;
-  const logoHeight = 18;
-  const logoYPos = yPos;
+  // ===== FUNCTION: ADD HEADER TO PAGE =====
+  const addHeader = (isFirstPage = false) => {
+    const currentY = margin;
 
-  if (logoBase64) {
-    doc.addImage(logoBase64, "PNG", margin, logoYPos, logoWidth, logoHeight);
-  }
+    // ===== HEADER WITH LOGO =====
+    const logoWidth = 25;
+    const logoHeight = 18;
+    const logoYPos = currentY;
 
-  // ===== HEADER TEXT (beside logo, vertically centered) =====
-  const headerStartX = margin + logoWidth + 6;
-  const logoCenter = logoYPos + logoHeight / 2;
+    if (logoBase64) {
+      doc.addImage(logoBase64, "PNG", margin, logoYPos, logoWidth, logoHeight);
+    }
 
-  // Calculate heights for vertical centering
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  const line1Height = 14 * 0.352778; // Convert pt to mm
+    // ===== HEADER TEXT (beside logo, vertically centered) =====
+    const headerStartX = margin + logoWidth + 6;
+    const logoCenter = logoYPos + logoHeight / 2;
 
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "italic");
-  const line2Height = 9 * 0.352778;
+    // Calculate heights for vertical centering
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    const line1Height = 14 * 0.352778; // Convert pt to mm
 
-  const totalTextHeight = line1Height + line2Height + 3; // 3mm spacing
-  const textStartY = logoCenter - totalTextHeight / 2 + line1Height / 2;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "italic");
+    const line2Height = 9 * 0.352778;
 
-  // Line 1: UNIVERSITAS TERBUKA PALANGKA RAYA
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("UNIVERSITAS TERBUKA PALANGKA RAYA", headerStartX, textStartY);
+    const totalTextHeight = line1Height + line2Height + 3; // 3mm spacing
+    const textStartY = logoCenter - totalTextHeight / 2 + line1Height / 2;
 
-  // Line 2: Sistem Inventori
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "italic");
-  doc.text(
-    "Sistem Inventori Wisuda & Rangkaian Sosprom (SIWARAS)",
-    headerStartX,
-    textStartY + line1Height + 3
-  );
+    // Line 1: UNIVERSITAS TERBUKA PALANGKA RAYA
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("UNIVERSITAS TERBUKA PALANGKA RAYA", headerStartX, textStartY);
 
-  // Update yPos after header
-  yPos =
-    Math.max(
-      logoYPos + logoHeight,
-      textStartY + line1Height + line2Height + 3
-    ) + 3;
+    // Line 2: Sistem Inventori
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "italic");
+    doc.text(
+      "Sistem Inventori Wisuda & Rangkaian Sosprom (SIWARAS)",
+      headerStartX,
+      textStartY + line1Height + 3
+    );
 
-  // ===== HORIZONTAL LINE =====
-  doc.setLineWidth(0.8);
-  doc.setDrawColor(41, 128, 185);
-  doc.line(margin, yPos, pageWidth - margin, yPos);
-  yPos += 10;
+    const headerEndY =
+      Math.max(
+        logoYPos + logoHeight,
+        textStartY + line1Height + line2Height + 3
+      ) + 3;
+
+    // ===== HORIZONTAL LINE =====
+    doc.setLineWidth(0.8);
+    doc.setDrawColor(41, 128, 185);
+    doc.line(margin, headerEndY, pageWidth - margin, headerEndY);
+
+    return headerEndY + 5; // Return Y position after header
+  };
+
+  // ===== FUNCTION: ADD FOOTER TO PAGE =====
+  const addFooter = (pageNumber, totalPages) => {
+    const footerY = pageHeight - 10;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(120);
+
+    // Page number (left)
+    doc.text(`Halaman ${pageNumber} dari ${totalPages}`, margin, footerY);
+
+    // Timestamp (center)
+    const footerText = `Dicetak: ${new Date().toLocaleString("id-ID")}`;
+    const footerWidth = doc.getTextWidth(footerText);
+    doc.text(footerText, (pageWidth - footerWidth) / 2, footerY);
+
+    // Reset text color
+    doc.setTextColor(0);
+  };
+
+  // ===== ADD HEADER TO FIRST PAGE =====
+  yPos = addHeader(true);
+  yPos += 5;
 
   // ===== TITLE =====
   doc.setFontSize(14);
@@ -853,7 +881,7 @@ async function generatePDFWithData(tandaTerima, barangList, formData) {
 
   yPos += 5;
 
-  // ===== TABLE BARANG =====
+  // ===== TABLE BARANG WITH AUTO PAGE BREAK =====
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.text("Daftar Barang:", margin, yPos);
@@ -882,6 +910,7 @@ async function generatePDFWithData(tandaTerima, barangList, formData) {
     colWidths.satuan -
     colWidths.jumlah;
 
+  // ===== AUTO TABLE WITH PAGE BREAK HANDLING =====
   doc.autoTable({
     startY: yPos,
     head: [["No", "Kode Barang", "Nama Barang", "Satuan", "Jumlah"]],
@@ -905,15 +934,38 @@ async function generatePDFWithData(tandaTerima, barangList, formData) {
       3: { halign: "center", cellWidth: colWidths.satuan },
       4: { halign: "center", cellWidth: colWidths.jumlah },
     },
-    margin: { left: margin, right: margin },
+    margin: { left: margin, right: margin, top: 50, bottom: 25 },
     tableWidth: "auto",
     styles: {
       overflow: "linebreak",
       cellWidth: "wrap",
     },
+    // ===== CALLBACK: ADD HEADER ON NEW PAGE =====
+    didDrawPage: function (data) {
+      // Skip first page (already has header)
+      if (data.pageNumber > 1) {
+        const headerY = addHeader(false);
+
+        // Add "Lanjutan Daftar Barang" text
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text("Daftar Barang (Lanjutan):", margin, headerY + 5);
+      }
+    },
+    // ===== SHOW HEAD ON EVERY PAGE =====
+    showHead: "everyPage",
   });
 
   yPos = doc.lastAutoTable.finalY + 10;
+
+  // ===== CHECK IF NEED NEW PAGE FOR RECIPIENT DATA =====
+  const remainingSpace = pageHeight - yPos - 25; // 25mm for footer
+  const neededSpace = 60; // Estimated space for recipient data + signature
+
+  if (remainingSpace < neededSpace) {
+    doc.addPage();
+    yPos = addHeader(false) + 10;
+  }
 
   // ===== DATA PENERIMA =====
   doc.setFontSize(11);
@@ -983,16 +1035,12 @@ async function generatePDFWithData(tandaTerima, barangList, formData) {
   doc.text(String(tandaTerima.createdBy || "Admin"), col1X, yPos);
   doc.text(String(formData.nama || "-"), col2X, yPos);
 
-  // ===== FOOTER =====
-  const footerY = pageHeight - 10;
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "italic");
-  doc.setTextColor(120);
-  const footerText = `Dokumen ini dicetak otomatis oleh SIWARAS UT pada ${new Date().toLocaleString(
-    "id-ID"
-  )}`;
-  const footerWidth = doc.getTextWidth(footerText);
-  doc.text(footerText, (pageWidth - footerWidth) / 2, footerY);
+  // ===== ADD FOOTER TO ALL PAGES =====
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    addFooter(i, totalPages);
+  }
 
   // ===== SAVE PDF =====
   const fileName = `TandaTerima_${tandaTerima.id_tt}_${Date.now()}.pdf`;
