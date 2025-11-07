@@ -531,17 +531,47 @@ function editCell(cell) {
 
   cell.classList.add("editing");
 
-  // Handle blur (save)
-  input.onblur = async function () {
-    await saveCell(cell, field, input.value.trim());
+  // ✅ DEBOUNCED SAVE (500ms delay after typing stops)
+  let saveTimeout;
+
+  // Handle input change
+  input.oninput = function () {
+    // Clear previous timeout
+    clearTimeout(saveTimeout);
+
+    // Set new timeout
+    saveTimeout = setTimeout(async () => {
+      await saveCell(cell, field, input.value.trim());
+    }, 500); // Wait 500ms after user stops typing
   };
 
-  // Handle Enter key
+  // Handle blur (save immediately if changed)
+  input.onblur = async function () {
+    clearTimeout(saveTimeout); // Cancel debounced save
+
+    const newValue = input.value.trim();
+    const oldValue =
+      currentFormData[field] === "-" ? "" : currentFormData[field];
+
+    // Only save if value changed
+    if (newValue !== oldValue) {
+      await saveCell(cell, field, newValue);
+    } else {
+      // Just hide input without saving
+      valueSpan.style.display = "block";
+      input.style.display = "none";
+      cell.classList.remove("editing");
+    }
+  };
+
+  // Handle Enter key (save immediately)
   input.onkeydown = function (e) {
     if (e.key === "Enter") {
-      input.blur();
+      clearTimeout(saveTimeout); // Cancel debounced save
+      input.blur(); // Trigger onblur (which saves)
     }
     if (e.key === "Escape") {
+      clearTimeout(saveTimeout); // Cancel debounced save
       cancelEdit(cell, valueSpan, input);
     }
   };
@@ -562,33 +592,39 @@ async function saveCell(cell, field, newValue) {
     newValue = "-";
   }
 
-  // Update local data
+  // ✅ OPTIMISTIC UPDATE: Update UI immediately (no loading)
   currentFormData[field] = newValue;
-
-  // Update display
   valueSpan.textContent = newValue;
   valueSpan.style.display = "block";
   input.style.display = "none";
   cell.classList.remove("editing");
 
-  // Save to backend
-  Utils.showLoading(true);
-
+  // ✅ BACKGROUND SAVE: Save to backend without blocking UI
   try {
+    // Save to backend (in background)
     await API.post(
       "updateTandaTerimaFormData",
       { id_tt: currentTandaTerima.id_tt, ...currentFormData },
       DB_TYPE
     );
-    await Auth.logAudit(
+
+    // ✅ SILENT SUCCESS: No toast notification to avoid spam
+    console.log(`✅ Saved ${field}: ${newValue}`);
+
+    // Audit log (non-blocking)
+    Auth.logAudit(
       "UPDATE_FORM_DATA_TANDA_TERIMA",
       `Update ${field} tanda terima ${currentTandaTerima.id_tt}`
     );
   } catch (error) {
     console.error("Error saving form data:", error);
-    toast.error("Gagal menyimpan data: " + error.message, "Error!");
-  } finally {
-    Utils.showLoading(false);
+
+    // ✅ ROLLBACK on error
+    currentFormData[field] = valueSpan.dataset.oldValue || "-";
+    valueSpan.textContent = currentFormData[field];
+
+    // Show error toast
+    toast.error(`Gagal menyimpan ${field}!\n${error.message}`, "Error!");
   }
 }
 
